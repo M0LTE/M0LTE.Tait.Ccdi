@@ -1,0 +1,36 @@
+name: ci
+
+# Build + test on every push and PR. GitHub-hosted runners: this is a public repo, so
+# standard-runner minutes are free, and the job needs nothing but a .NET SDK. (No docker
+# stack, no attached hardware, no test traits to filter, and nothing here talks to a real
+# radio: the Tait driver's tests drive it over a scripted ISerialIo.)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      # Lights up the six [SkippableFact] rigctld interop tests in M0LTE.Radio.Tait.Tests,
+      # which drive a real hamlib dummy rig. Without it they report Skipped, not Passed.
+      - name: guard - plain ASCII in operator-facing output
+        run: bash scripts/check-ascii-output.sh
+      - name: build
+        run: dotnet build -c Release
+      - name: test
+        run: dotnet test -c Release --no-build

@@ -1,6 +1,6 @@
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// <see cref="IRadioSideChannel"/> over Tait CCDI Short Data Messages: datagrams ride the
@@ -17,7 +17,7 @@ namespace Packet.Radio.Tait;
 /// character), per CCDI §1.9.8. With <see cref="TaitSdmSideChannelOptions.EnableExtendedSdm"/>
 /// the budget rises to <see cref="ExtendedPayloadBudget"/> characters: payloads over 32
 /// characters ride the extended SDM format (SFI 04), which the radios split and reassemble
-/// natively - hardware-verified TM8110↔TM8110 (see
+/// natively - hardware-verified TM8110 to TM8110 (see
 /// <see cref="TaitCcdiRadio.SendExtendedSdmAsync"/>). The radio's receive buffer is one-deep
 /// with overwrite-on-arrival, and these radios emit an FFSK-data PROGRESS on mere carrier
 /// rise - both quirks are exactly the behaviour the <see cref="IRadioSideChannel"/> contract
@@ -113,7 +113,7 @@ public sealed record TaitSdmSideChannelOptions
     /// Allow payloads over 32 characters (up to
     /// <see cref="TaitSdmSideChannel.ExtendedPayloadBudget"/>) to ride the extended SDM
     /// format (SFI 04) and raise <see cref="TaitSdmSideChannel.MaxPayloadLength"/>
-    /// accordingly. Hardware-proven TM8110↔TM8110 (CCDI 03.02, 2026-07-03: 100- and
+    /// accordingly. Hardware-proven TM8110 to TM8110 (CCDI 03.02, 2026-07-03: 100- and
     /// 128-character messages delivered, natively reassembled, receipts acknowledged), but
     /// default <c>false</c>: an extended message costs multiple over-air FFSK bursts per
     /// datagram (longer airtime per send, more to lose to one collision), and whether a

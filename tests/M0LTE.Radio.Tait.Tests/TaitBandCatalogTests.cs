@@ -1,4 +1,4 @@
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>
 /// The Tait band catalogue + product-code parser (<see cref="TaitBandCatalog"/>): reading the

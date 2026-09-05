@@ -1,10 +1,10 @@
-namespace Packet.Radio;
+namespace M0LTE.Radio;
 
 /// <summary>
 /// A small-datagram messaging channel provided by the <em>radio itself</em>, riding the
 /// radio's own internal signalling modem rather than the audio-path modem/TNC (the canonical
 /// implementation is Tait CCDI Short Data Messages over the radios' built-in FFSK modem -
-/// see <c>TaitSdmSideChannel</c> in <c>Packet.Radio.Tait</c>).
+/// see <c>TaitSdmSideChannel</c> in <c>M0LTE.Radio.Tait</c>).
 /// </summary>
 /// <remarks>
 /// <para>

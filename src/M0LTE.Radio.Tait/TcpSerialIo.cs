@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// A TCP-backed <see cref="ISerialIo"/>: the Tait CCDI driver's byte seam pointed at a remote
@@ -23,7 +23,7 @@ namespace Packet.Radio.Tait;
 /// <para>
 /// <b>Half-open detection.</b> Beyond the per-read pacing timeout, a longer read-idle budget
 /// guards against a silently dropped connection (peer rebooted, cable pulled - no FIN),
-/// mirroring <c>Packet.Kiss.KissTcpClient</c> (#464): once the link has produced no byte for
+/// once the link has produced no byte for
 /// that budget a receive timeout is escalated to an <see cref="IOException"/> so the pump faults
 /// the radio rather than pacing forever. OS TCP keepalive is enabled as the faster probe.
 /// </para>
@@ -33,7 +33,7 @@ namespace Packet.Radio.Tait;
 /// head-end verb a later stage supplies), defaulting to a no-op so a plain raw pipe works today.
 /// </para>
 /// </remarks>
-internal sealed class TcpSerialIo : ISerialIo
+public sealed class TcpSerialIo : ISerialIo
 {
     /// <summary>Per-read pacing timeout - mirrors the local <see cref="System.IO.Ports.SerialPort.ReadTimeout"/>
     /// of 100 ms the driver opens with, so the pump wakes to check cancellation ~10×/s.</summary>

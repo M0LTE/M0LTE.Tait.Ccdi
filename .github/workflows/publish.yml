@@ -1,0 +1,108 @@
+name: publish
+
+# Tagging v<semver> gates on the tests, then publishes all three packages to nuget.org and
+# cuts a GitHub Release.
+#
+# Two things about this file that are load-bearing and not obvious:
+#
+#  1. It MUST be called publish.yml. nuget.org's trusted-publishing policy matches on
+#     owner + repo + workflow FILENAME. Renaming this file breaks the OIDC token exchange
+#     with a 401 and no other clue.
+#  2. The OIDC-minted API key is valid for one hour, so the pushes come first and anything
+#     slow comes after.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the v prefix, e.g. 0.1.0'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # gh release create
+      id-token: write   # OIDC token for nuget.org trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - id: v
+        name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          fi
+
+
+      - name: Gate - build + test
+        run: |
+          dotnet build -c Release
+          dotnet test -c Release --no-build
+
+      - name: Pack
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          for p in M0LTE.Radio M0LTE.Radio.Tait; do
+            dotnet pack "src/${p}/${p}.csproj" -c Release --output ./artifacts -p:Version="${VERSION}"
+          done
+          ls -l ./artifacts/
+
+      - name: NuGet login (OIDC -> short-lived API key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: tomf84
+
+      - name: Push to nuget.org
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          for p in M0LTE.Radio M0LTE.Radio.Tait; do
+            dotnet nuget push "./artifacts/${p}.${VERSION}.nupkg" \
+              --source https://api.nuget.org/v3/index.json \
+              --api-key "${API_KEY}" \
+              --skip-duplicate
+            if [ -f "./artifacts/${p}.${VERSION}.snupkg" ]; then
+              dotnet nuget push "./artifacts/${p}.${VERSION}.snupkg" \
+                --source https://api.nuget.org/v3/index.json \
+                --api-key "${API_KEY}" \
+                --skip-duplicate || \
+                echo "::warning::${p} snupkg push failed; the main nupkg still uploaded."
+            fi
+          done
+
+      - name: GitHub Release
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes=$(awk -v v="## ${VERSION}" '
+            $0 ~ "^"v { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "${notes// }" ]; then
+            echo "::warning::no CHANGELOG section for ${VERSION}; falling back to commit subjects"
+            notes=$(git log --pretty=format:'- %s' "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD)"..HEAD)
+          fi
+          printf '%s\n' "$notes" > /tmp/notes.md
+          gh release create "v${VERSION}" --title "M0LTE.Radio ${VERSION}" --notes-file /tmp/notes.md

@@ -1,4 +1,4 @@
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// The radio's self-description, assembled from the MODEL, RADIO_SERIAL and RADIO_VERSIONS

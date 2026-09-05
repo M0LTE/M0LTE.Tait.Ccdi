@@ -1,10 +1,10 @@
-using Packet.Rig;
+using M0LTE.Rig;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// The station-control (<see cref="IRigControl"/>) view of a Tait CCDI radio - the third,
-/// deliberately-different implementation pressure-testing the <c>Packet.Rig</c> abstraction
+/// deliberately-different implementation pressure-testing the <c>M0LTE.Rig</c> abstraction
 /// from the channelised-PMR side (after rigctld and flrig; plan OQ-011). A thin adapter over
 /// <see cref="TaitCcdiRadio"/>: the radio object stays the owner of the wire, the packet-medium
 /// seam (<c>IRadioControl</c>: RSSI/DCD/SDM) and everything Tait-native; this class only
@@ -114,7 +114,7 @@ public sealed class TaitRigControl : IRigControl
         => throw FrequencyNotSupported();
 
     private static NotSupportedException FrequencyNotSupported() => new(
-        "CCDI cannot read the tuned frequency (only the band split — see TaitRadioIdentity.Band), " +
+        "CCDI cannot read the tuned frequency (only the band split - see TaitRadioIdentity.Band), " +
         "and frequency programming is a CCR-session operation not yet wired to this seam.");
 
     /// <inheritdoc />
@@ -126,7 +126,7 @@ public sealed class TaitRigControl : IRigControl
         => throw ModeNotSupported();
 
     private static NotSupportedException ModeNotSupported()
-        => new("A Tait PMR radio has no operating-mode control — it is an FM transceiver.");
+        => new("A Tait PMR radio has no operating-mode control - it is an FM transceiver.");
 
     /// <inheritdoc />
     /// <remarks>
@@ -188,27 +188,27 @@ public sealed class TaitRigControl : IRigControl
     /// <inheritdoc />
     public ValueTask<double> ReadRfPowerWattsAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException(
-            "CCTM 318 is a raw detector reading (0–1200 mV), not calibrated watts — use " +
+            "CCTM 318 is a raw detector reading (0-1200 mV), not calibrated watts - use " +
             "ReadRfPowerAsync (relative) or the raw TaitCcdiRadio.ReadForwardPowerAsync.");
 
     /// <inheritdoc />
     public ValueTask<double> ReadSwrAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException(
-            "SWR needs a detector-calibration decision before it can be reported as a ratio — " +
+            "SWR needs a detector-calibration decision before it can be reported as a ratio - " +
             "the raw forward/reverse detector readings are on TaitCcdiRadio.ReadForwardPowerAsync/" +
             "ReadReversePowerAsync (CCTM 318/319).");
 
     /// <inheritdoc />
     public ValueTask<bool> ReadDcdAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException(
-            "The Tait driver is a radio-control implementation in its own right — carrier sense " +
+            "The Tait driver is a radio-control implementation in its own right - carrier sense " +
             "is served natively on IRadioControl via TaitCcdiRadio.ChannelBusy/CarrierSenseChanged " +
             "(PROGRESS), not through the rig-seam bridge.");
 
     /// <inheritdoc />
     public ValueTask<double> ReadSignalStrengthDbmAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException(
-            "The Tait driver is a radio-control implementation in its own right — signal strength " +
+            "The Tait driver is a radio-control implementation in its own right - signal strength " +
             "is served natively on IRadioControl via TaitCcdiRadio.ReadRssiDbmAsync (CCTM 064), " +
             "not through the rig-seam bridge.");
 

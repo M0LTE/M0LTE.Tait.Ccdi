@@ -1,6 +1,6 @@
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 public class TaitRadioHealthMonitorTests
 {
@@ -31,7 +31,7 @@ public class TaitRadioHealthMonitorTests
     {
         using var io = new FakeSerialIo();
         RespondIdle(io, rssiTenths: "-903", fwd: 15, rev: 0);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {
@@ -57,7 +57,7 @@ public class TaitRadioHealthMonitorTests
     {
         using var io = new FakeSerialIo();
         RespondIdle(io, fwd: 15, rev: 2);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {
@@ -98,7 +98,7 @@ public class TaitRadioHealthMonitorTests
     {
         using var io = new FakeSerialIo();
         RespondIdle(io, fwd: 0, rev: 0);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {
@@ -130,7 +130,7 @@ public class TaitRadioHealthMonitorTests
         io.RespondTo(Wire('q', "5063"), Reply(Wire('j', "063-903")));
         io.RespondTo(Wire('q', "5318"), Reply(Wire('j', "31815")));
         io.RespondTo(Wire('q', "5319"), Reply(Wire('j', "3190")));
-        await using var radio = TaitCcdiRadio.OpenForTest(
+        await using var radio = TaitCcdiRadio.Open(
             io, new TaitCcdiRadioOptions { TransactionTimeout = TimeSpan.FromMilliseconds(250) });
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
@@ -158,7 +158,7 @@ public class TaitRadioHealthMonitorTests
         using var io = new FakeSerialIo();
         RespondIdle(io);
         io.RespondTo(Wire('q', "5063"), Reply(Wire('e', "001"))); // RSSI answers ERROR
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {
@@ -178,7 +178,7 @@ public class TaitRadioHealthMonitorTests
     {
         using var io = new FakeSerialIo();
         RespondIdle(io, rssiTenths: "-903");
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {
@@ -210,7 +210,7 @@ public class TaitRadioHealthMonitorTests
     {
         using var io = new FakeSerialIo();
         RespondIdle(io);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var samples = new BlockingSamples();
         await using var monitor = StartMonitor(radio, samples, new TaitRadioHealthMonitorOptions
         {

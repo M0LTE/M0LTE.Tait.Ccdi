@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Packet.Radio.Tait.Ccdi;
+namespace M0LTE.Radio.Tait.Ccdi;
 
 /// <summary>A decoded CCDI message from the radio (manual §1.10). Unrecognised idents surface
 /// as <see cref="CcdiUnknownMessage"/> rather than being dropped.</summary>

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
-using Packet.Radio;
+using M0LTE.Radio;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>
 /// The #576 fault-path behaviour of <see cref="TaitCcdiRadio"/>: a faulting link clears the
@@ -22,7 +22,7 @@ public class TaitCcdiRadioFaultTests
     public async Task A_fault_clears_channel_busy_and_raises_a_final_carrier_clear_edge()
     {
         var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions
         {
             KeepAliveInterval = null,
             StaleBusyRevalidateAfter = null,
@@ -56,7 +56,7 @@ public class TaitCcdiRadioFaultTests
         (await faulted.WaitAsync(Timeout)).Should().BeTrue("the pump must fault the connection state");
 
         radio.ChannelBusy.Should().BeNull(
-            "a faulted link's last DCD report is no longer evidence — unknown fails the CSMA gate open, " +
+            "a faulted link's last DCD report is no longer evidence - unknown fails the CSMA gate open, " +
             "instead of a latched busy deferring every keyup its full MaxWait");
         (await carrierSeen.WaitAsync(Timeout)).Should().BeTrue("the fault raises a final carrier-clear edge");
         lock (edges)
@@ -72,7 +72,7 @@ public class TaitCcdiRadioFaultTests
     {
         var clock = new FakeTimeProvider();
         var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions
         {
             // Keep the quiet-link fault path out of this test: only the staleness re-validation
             // should be acting (the two share the watchdog loop).
@@ -118,7 +118,7 @@ public class TaitCcdiRadioFaultTests
         var clock = new FakeTimeProvider();
         var io = new FakeSerialIo();
         io.RespondTo(RssiQueryWire, RssiReply);   // the radio answers the probe - it is alive
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions
         {
             KeepAliveInterval = TimeSpan.FromHours(1),
             StaleBusyRevalidateAfter = TimeSpan.FromSeconds(30),
@@ -147,7 +147,7 @@ public class TaitCcdiRadioFaultTests
             "the re-validation probe was issued");
 
         radio.ChannelBusy.Should().BeTrue(
-            "a responsive radio's long busy is genuine (a long carrier) — re-validation must not clear it");
+            "a responsive radio's long busy is genuine (a long carrier) - re-validation must not clear it");
         lock (edges)
         {
             edges.Should().Equal(new[] { true }, "no synthetic clear edge is raised while the radio answers");

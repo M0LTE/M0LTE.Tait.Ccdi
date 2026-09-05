@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Time.Testing;
-using Packet.Radio.Tait.Ccdi;
-using Packet.Rig;
+using M0LTE.Radio.Tait.Ccdi;
+using M0LTE.Rig;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>
 /// The station-control (<see cref="IRigControl"/>) view of the CCDI radio, over the same
@@ -41,7 +41,7 @@ public class TaitRigControlTests
         {
             options = options with { PromptErrorGrace = grace };
         }
-        return TaitCcdiRadio.OpenForTest(io, options, clock);
+        return TaitCcdiRadio.Open(io, options, clock);
     }
 
     /// <summary>The identity the node caches at adoption, so the adapter can be built without
@@ -118,7 +118,7 @@ public class TaitRigControlTests
         var seen = new SemaphoreSlim(0);
         radio.TransmitterStateChanged += (_, _) => seen.Release();
 
-        io.Enqueue(Answer(Frame('p', "07"))); // PTT_ACTIVATED — the fist mic, not us
+        io.Enqueue(Answer(Frame('p', "07"))); // PTT_ACTIVATED - the fist mic, not us
         (await seen.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
         (await rig.GetPttAsync()).Should().BeTrue();
 
@@ -167,7 +167,7 @@ public class TaitRigControlTests
     public async Task Silent_Radio_Maps_To_RigTimeoutException()
     {
         using var io = NewIoAnsweringIdentity();
-        // No response scripted for CCTM 318 — the driver's transaction deadline fires.
+        // No response scripted for CCTM 318 - the driver's transaction deadline fires.
         await using var radio = NewRadio(io, transactionTimeout: TimeSpan.FromMilliseconds(200));
         await using var rig = await TaitRigControl.CreateAsync(radio);
 

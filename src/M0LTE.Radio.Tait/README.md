@@ -1,23 +1,23 @@
-# Packet.Radio.Tait
+# M0LTE.Radio.Tait
 
-> Tait TM8100/TM8200 mobile-radio control over CCDI - the driver that gives the Packet.NET stack RSSI, hardware carrier-sense, PTT, and a radio-native side channel.
+> Tait TM8100/TM8200 mobile-radio control over CCDI: RSSI, hardware carrier-sense, PTT, telemetry, and a radio-native side channel.
 
-A [`Packet.Radio`](https://www.nuget.org/packages/Packet.Radio) `IRadioControl` implementation for Tait TM8100/TM8200 radios over CCDI (the Computer-Controlled Data Interface - the radio's serial command protocol). Wire it to `RssiTaggingTransport` and `RadioCarrierSense` (the `ICarrierSense` bridge the AX.25 stack's native CSMA gate consults) and a bare KISS packet link gains per-frame signal metadata and hardware carrier-sense CSMA. Part of [Packet.NET](https://github.com/packet-net/packet.net), a .NET amateur-radio / AX.25 packet stack.
+A [`M0LTE.Radio`](https://www.nuget.org/packages/M0LTE.Radio) `IRadioControl` implementation for Tait TM8100/TM8200 radios over CCDI, the Computer-Controlled Data Interface: the radio's serial command protocol.
 
 ## Install
 ```sh
-dotnet add package Packet.Radio.Tait
+dotnet add package M0LTE.Radio.Tait
 ```
 
 ## What it surfaces that a bare KISS modem cannot
 
-- **RSSI in dBm** (CCTM queries 063/064, 0.1 dB resolution) - feed `RssiTaggingTransport` to stamp per-frame RSSI/SNR onto received AX.25 frames.
+- **RSSI in dBm** (CCTM queries 063/064, 0.1 dB resolution).
 - **Hardware carrier-sense** - unsolicited PROGRESS "receiver busy / not busy" messages become `CarrierSenseChanged` events + a `ChannelBusy` property (a true RF-level DCD).
 - **Transmitter keying** (`SetTransmitterAsync`) - CCDI-forced TX ignores the radio's TX timer, so the driver unkeys on dispose if you left it keyed through it.
 - **Telemetry + health** - PA temperature (CCTM 047), forward/reverse power detector readings (CCTM 318/319, an antenna-health proxy while transmitting), and a periodic **`TaitRadioHealthMonitor`** that trends them: idle-offset-corrected fwd/rev + ratio (a TREND, never VSWR - the detectors are raw √P-scaled millivolts per Tait's service docs), typed sample events + rolling min/median/max summaries.
 - **Identity** - model/tier, CCDI version, serial number, firmware/hardware version inventory.
 - **An escape hatch** (`TransactRawAsync`) for CCDI commands the driver doesn't model yet - framing and checksumming handled, responses returned decoded.
-- **A station-control view** (`TaitRigControl`) - re-presents the radio through the [`Packet.Rig`](https://www.nuget.org/packages/Packet.Rig) `IRigControl` abstraction (the same seam the hamlib/rigctld and flrig backends implement), advertising the slice CCDI can honestly serve: PTT set/get and a relative RF-power meter (the CCTM 318 forward detector over its full scale). Frequency, mode, SWR and watts are deliberately unadvertised - the tuned frequency isn't CCDI-readable, the radio has no mode concept, and the power detectors are raw √P-scaled millivolts, not calibrated units. Cross-backend rig consumers feature-probe `RigCapabilities` and get exactly what's real.
+- **A station-control view** (`TaitRigControl`) - re-presents the radio through the [`M0LTE.Rig`](https://www.nuget.org/packages/M0LTE.Rig) `IRigControl` abstraction (the same seam the hamlib/rigctld and flrig backends implement), advertising the slice CCDI can honestly serve: PTT set/get and a relative RF-power meter (the CCTM 318 forward detector over its full scale). Frequency, mode, SWR and watts are deliberately unadvertised - the tuned frequency isn't CCDI-readable, the radio has no mode concept, and the power detectors are raw √P-scaled millivolts, not calibrated units. Cross-backend rig consumers feature-probe `RigCapabilities` and get exactly what's real.
 
 ## Usage
 ```csharp
@@ -29,25 +29,19 @@ float rssi = await radio.ReadRssiDbmAsync();                // e.g. -90.3
 radio.CarrierSenseChanged += (_, e) => Console.WriteLine($"DCD {(e.Busy ? "up" : "down")} at {e.At:O}");
 ```
 
-The radio must be programmed with its data port in **Command mode** (the power-up state) at the matching baud rate. (For the TNC-less FFSK link, `TaitTransparentTransport` drives the Transparent-mode enter/escape for you - see below.)
+The radio must be programmed with its data port in **Command mode** (the power-up state) at the matching baud rate.
 
-## TNC-less AX.25: the FFSK Transparent transport
+`TaitCcdiRadio.Open` also takes an `ISerialIo` instead of a port name, so you can drive the radio over a byte pipe this package does not model - a serial-to-TCP bridge, say ([`TcpSerialIo`](https://www.nuget.org/packages/M0LTE.Radio.Tait) is supplied) - or script one in a test and exercise the whole transaction engine and unsolicited-message demux with no hardware attached.
 
-`TaitTransparentTransport` is an `IAx25Transport` whose modem **is** the radio - no external TNC. It puts the radio into Transparent mode (the radio's own FFSK modem as an 8-bit-clean byte pipe), frames AX.25 with **KISS SLIP framing** over that pipe, and de-frames the inbound byte stream back into whole AX.25 frames (the radio fragments/reassembles ≤46-byte over-air blocks itself). Because the transport *owns* the transmission it times it directly: a `TxTiming` event and `ITxCompletionTransport` give per-frame on-air start/end, and inbound frames carry `ReceivedAt` + `RadioMetadata.EstimatedAirtime`.
+## TNC-less AX.25 over the radio's own FFSK modem
 
-```csharp
-await using var link = await TaitTransparentTransport.OpenAsync("/dev/ttyUSB0");
-await link.SendAsync(ax25FrameBody);            // SLIP-framed over the FFSK pipe
-await foreach (var f in link.ReceiveAsync(ct))  // whole AX.25 frames, ReceivedAt + airtime stamped
-    Handle(f.Ax25, f.ReceivedAt, f.Radio?.EstimatedAirtime);
-// DisposeAsync escapes Transparent (+++) and restores Command mode.
-```
+The radio's Transparent mode turns its internal FFSK modem into an 8-bit-clean byte pipe, which is enough to carry AX.25 with no external TNC at all. That transport is AX.25-specific, so it does not live here: it ships as [`Packet.Ax25.Radio.Tait`](https://www.nuget.org/packages/Packet.Ax25.Radio.Tait), which builds on this package.
 
-The inherent trade-off vs the `RssiTaggingTransport` (NinoTNC modem + CCDI control channel) arrangement: **one device, no audio wiring, but no signal telemetry** - RSSI/SNR/noise-floor/DCD are unavailable while the CCDI channel is a byte pipe (those `RadioMetadata` fields stay null; only airtime is known). ⚠ If the radio is programmed with "Ignore Escape Sequence" **on**, the `+++` exit cannot succeed and recovery is a power cycle - program the escape sequence honoured before running it unattended.
+The trade-off it makes is worth knowing before you reach for it: one device and no audio wiring, but no signal telemetry, because while the CCDI channel is acting as a byte pipe the RSSI, SNR, noise-floor and DCD surfaces described above are unavailable.
 
 ## Beyond telemetry
 
-The driver models the rest of the documented surface: channel report/change (`QueryCurrentChannelAsync` / `GoToChannelAsync`), CANCEL / DIAL, and **SDM short-data messages** - radio-to-radio, no TNC: plain 32-character (`SendSdmAsync`) and extended 128-character (`SendExtendedSdmAsync`), requiring SDMs enabled in the radio's programming. `TaitSdmSideChannel` exposes SDMs as a `Packet.Radio.IRadioSideChannel`, the mode-agnostic coordination plane the tuning / mode-negotiation stack rides. Also: display query, Transparent mode (the radio's own FFSK/THSD modem as a byte pipe), a keep-alive **watchdog** (`ConnectionState` + events; probes on link silence, self-heals on recovery), **port auto-detection** (`TaitRadioPortDiscovery` - probes candidate ports with a MODEL query and identifies radios by CCDI serial number), and the whole **CCR mode** (`TaitCcrSession`, TM8100 only): run-time RX/TX frequency in Hz, TX power, bandwidth, CTCSS/DCS, Selcall encode/decode events, volume, and the pulse ping.
+The driver models the rest of the documented surface: channel report/change (`QueryCurrentChannelAsync` / `GoToChannelAsync`), CANCEL / DIAL, and **SDM short-data messages** - radio-to-radio, no TNC: plain 32-character (`SendSdmAsync`) and extended 128-character (`SendExtendedSdmAsync`), requiring SDMs enabled in the radio's programming. `TaitSdmSideChannel` exposes SDMs as an `M0LTE.Radio.IRadioSideChannel`, the mode-agnostic coordination plane a tuning or mode-negotiation stack can ride. Also: display query, Transparent mode (the radio's own FFSK/THSD modem as a byte pipe), a keep-alive **watchdog** (`ConnectionState` + events; probes on link silence, self-heals on recovery), **port auto-detection** (`TaitRadioPortDiscovery` - probes candidate ports with a MODEL query and identifies radios by CCDI serial number), and the whole **CCR mode** (`TaitCcrSession`, TM8100 only): run-time RX/TX frequency in Hz, TX power, bandwidth, CTCSS/DCS, Selcall encode/decode events, volume, and the pulse ping.
 
 ### ⚠ SDM delivery receipts are unreliable for close bidirectional traffic
 
@@ -70,13 +64,14 @@ effect and save the ack airtime, but you cannot assume that on radios you don't 
 `UnsafeSendCcrOverSdmAsync` transmits a CCR command *into another radio* over the air - remote control that can retune, re-power, or key the target, with **no consent handshake in the protocol**. It is `[Experimental]` (`PKTTAIT001`) and carries the `Unsafe` prefix deliberately: a radio not already in CCR mode simply ignores it (immune), but any real deployment needs an application-layer consent/auth gate first - keep it to bench tooling and radios you own. See the [CCDI spike doc](https://github.com/packet-net/packet.net/blob/main/docs/research/tait-ccdi-spike.md).
 
 ## See also
-- [Source & issues](https://github.com/packet-net/packet.net)
-- [`Packet.Radio`](https://www.nuget.org/packages/Packet.Radio) - the `IRadioControl` contract this implements
+- [`M0LTE.Radio`](https://www.nuget.org/packages/M0LTE.Radio) - the `IRadioControl` contract this implements
+- [`M0LTE.Rig`](https://www.nuget.org/packages/M0LTE.Rig) - the CAT seam `TaitRigControl` presents the radio through
+- [`Packet.Ax25.Radio.Tait`](https://www.nuget.org/packages/Packet.Ax25.Radio.Tait) - AX.25 over the radio's Transparent-mode FFSK pipe
 - [`Packet.Tune.Core`](https://www.nuget.org/packages/Packet.Tune.Core) - link-tuning + mode coordination over the SDM side channel
 
 Verified on hardware: 2× TM8110 (`TMAB12-B100`, CCDI 03.02, firmware 02.18.00.00). On that firmware the CCDI-side TX-power set (FUNCTION 0/7) answers "unsupported command" - but the CCR-mode power command works, so power control lives on `TaitCcrSession`.
 
-Status: **experimental**, spike-born (plan §5.10 Phase 10). Protocol reference: Tait MMA-00038-06 "TM8100/TM8200 CCDI Protocol Manual".
+Status: **experimental**, spike-born. Protocol reference: Tait MMA-00038-06 "TM8100/TM8200 CCDI Protocol Manual".
 
 ---
-*AGPL-3.0-licensed. Part of the [Packet.NET](https://github.com/packet-net/packet.net) stack.*
+*AGPL-3.0-licensed.*

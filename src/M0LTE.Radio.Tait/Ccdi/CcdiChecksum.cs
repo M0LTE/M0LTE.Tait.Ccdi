@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Packet.Radio.Tait.Ccdi;
+namespace M0LTE.Radio.Tait.Ccdi;
 
 /// <summary>
 /// The CCDI checksum (manual §1.8.5): modulo-256 sum of every message byte before the checksum

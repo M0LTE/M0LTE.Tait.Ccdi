@@ -2,7 +2,7 @@ using System.IO.Ports;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// Finds Tait radios on the machine's serial ports - the CCDI analogue of

@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Packet.Radio.Tait\Packet.Radio.Tait.csproj" />
-    <ProjectReference Include="..\..\src\Packet.Radio\Packet.Radio.csproj" />
+    <ProjectReference Include="..\..\src\M0LTE.Radio\M0LTE.Radio.csproj" />
   </ItemGroup>
 
   <ItemGroup>

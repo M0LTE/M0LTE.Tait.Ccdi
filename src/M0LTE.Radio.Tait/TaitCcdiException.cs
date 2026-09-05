@@ -1,6 +1,6 @@
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>Thrown when the radio answers a CCDI transaction with an ERROR message.</summary>
 public sealed class TaitCcdiException : Exception

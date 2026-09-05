@@ -1,14 +1,14 @@
 using System.Globalization;
 using System.IO.Ports;
 using System.Text;
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// A Tait TM8100/TM8200 radio driven over its CCDI serial control channel (Command mode).
 /// Surfaces what standard KISS cannot: receiver RSSI in dBm (per-poll, suitable for per-frame
-/// attribution via <c>Packet.Radio.RssiTaggingTransport</c>), hardware carrier-sense (DCD)
+/// attribution via <c>M0LTE.Radio.RssiTaggingTransport</c>), hardware carrier-sense (DCD)
 /// edges as <see cref="CarrierSenseChanged"/> events, transmitter keying, and radio telemetry
 /// (PA temperature, forward/reverse power).
 /// </summary>
@@ -87,7 +87,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         RadioCapabilities.SideChannel;
 
     /// <inheritdoc/>
-    /// <remarks>Reset to <c>null</c> (unknown ⇒ the CSMA gate fails open) when the link faults
+    /// <remarks>Reset to <c>null</c> (unknown => the CSMA gate fails open) when the link faults
     /// (#576) and when a stale latched-busy fails its re-validation probe
     /// (<see cref="TaitCcdiRadioOptions.StaleBusyRevalidateAfter"/>).</remarks>
     public bool? ChannelBusy
@@ -233,7 +233,8 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// head-end (the split-station topology - see <c>docs/research/split-station-rf-headend.md</c>)
     /// and start the read pump. The socket carries the CCDI/PROGRESS byte stream unchanged, so
     /// carrier-sense (DCD) edges, RSSI reads, SDM and every transaction work exactly as over a
-    /// local port. Like <see cref="Open"/>, the radio itself is not touched - pair with
+    /// local port. Like <see cref="Open(string, int, TaitCcdiRadioOptions, TimeProvider)"/>, the
+    /// radio itself is not touched - pair with
     /// <see cref="SetProgressMessagesAsync"/> to turn on DCD events.
     /// </summary>
     /// <param name="host">Head-end host bridging the serial port.</param>
@@ -266,7 +267,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             if (setBaud is not null)
             {
                 // Clock the remote port to the requested CCDI rate before any transaction (the
-                // head-end owns the physical UART). No callback ⇒ the head-end's clock is trusted.
+                // head-end owns the physical UART). No callback => the head-end's clock is trusted.
                 await setBaud(baudRate, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -278,9 +279,14 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         return new TaitCcdiRadio(io, options, timeProvider);
     }
 
-    /// <summary>Test seam (InternalsVisibleTo <c>Packet.Radio.Tait.Tests</c>): drive the
-    /// transaction engine and demux over a scripted <see cref="ISerialIo"/>.</summary>
-    internal static TaitCcdiRadio OpenForTest(
+    /// <summary>
+    /// Open over a byte pipe you supply, rather than a named serial port, and start the read
+    /// pump. Use this to reach a radio over something we do not model (a TCP serial bridge -
+    /// see <see cref="TcpSerialIo"/>) or to drive the transaction engine and unsolicited-message
+    /// demux from a scripted <see cref="ISerialIo"/> in tests, with no hardware attached.
+    /// The radio takes ownership of <paramref name="io"/> and disposes it.
+    /// </summary>
+    public static TaitCcdiRadio Open(
         ISerialIo io, TaitCcdiRadioOptions? options = null, TimeProvider? timeProvider = null) =>
         new(io, options, timeProvider);
 
@@ -302,15 +308,15 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     }
 
     /// <inheritdoc/>
-    /// <remarks>CCTM query 064 — instantaneous ("raw") RSSI, resolution 0.1 dB.</remarks>
+    /// <remarks>CCTM query 064 - instantaneous ("raw") RSSI, resolution 0.1 dB.</remarks>
     public async ValueTask<float> ReadRssiDbmAsync(CancellationToken cancellationToken = default) =>
         await ReadCctmDecibelsAsync("064", cancellationToken).ConfigureAwait(false);
 
-    /// <summary>CCTM query 063 — the radio's own sliding-average RSSI, resolution 0.1 dB.</summary>
+    /// <summary>CCTM query 063 - the radio's own sliding-average RSSI, resolution 0.1 dB.</summary>
     public async Task<float> ReadAveragedRssiDbmAsync(CancellationToken cancellationToken = default) =>
         await ReadCctmDecibelsAsync("063", cancellationToken).ConfigureAwait(false);
 
-    /// <summary>CCTM query 047 — power-amplifier temperature.</summary>
+    /// <summary>CCTM query 047 - power-amplifier temperature.</summary>
     public async Task<TaitPaTemperature> ReadPaTemperatureAsync(CancellationToken cancellationToken = default)
     {
         var results = await TransactAsync(
@@ -327,11 +333,11 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         };
     }
 
-    /// <summary>CCTM query 318 — forward power detector reading (raw, 0–1200 mV).</summary>
+    /// <summary>CCTM query 318 - forward power detector reading (raw, 0-1200 mV).</summary>
     public Task<int?> ReadForwardPowerAsync(CancellationToken cancellationToken = default) =>
         ReadCctmIntegerAsync("318", cancellationToken);
 
-    /// <summary>CCTM query 319 — reverse power detector reading (raw, 0–1200 mV). Together with
+    /// <summary>CCTM query 319 - reverse power detector reading (raw, 0-1200 mV). Together with
     /// forward power this is a VSWR / antenna-health proxy while transmitting.</summary>
     public Task<int?> ReadReversePowerAsync(CancellationToken cancellationToken = default) =>
         ReadCctmIntegerAsync("319", cancellationToken);
@@ -370,7 +376,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         }
     }
 
-    /// <summary>FUNCTION 0/4: enable (or disable) unsolicited PROGRESS output — required for
+    /// <summary>FUNCTION 0/4: enable (or disable) unsolicited PROGRESS output - required for
     /// <see cref="CarrierSenseChanged"/> and <see cref="TransmitterStateChanged"/> to fire.</summary>
     public Task SetProgressMessagesAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
@@ -389,7 +395,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             new CcdiFrame('f', mute ? "51" : "50"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 0/1: enable (or disable) CCDI volume control — required before
+    /// <summary>FUNCTION 0/1: enable (or disable) CCDI volume control - required before
     /// <see cref="SetVolumeAsync"/> takes effect.</summary>
     public Task SetVolumeControlAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
@@ -397,8 +403,8 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
     /// <summary>FUNCTION 0/2: set the speaker volume, 0 (off) to 25 (loudest). This is the
-    /// 0–25 scale of TM8100 v2.06+ and all TM8200 firmware (§1.9.3 footnote c); pre-2.06
-    /// TM8100s used 0–9. Enable <see cref="SetVolumeControlAsync"/> first.</summary>
+    /// 0-25 scale of TM8100 v2.06+ and all TM8200 firmware (§1.9.3 footnote c); pre-2.06
+    /// TM8100s used 0-9. Enable <see cref="SetVolumeControlAsync"/> first.</summary>
     public Task SetVolumeAsync(int level, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(level);
@@ -408,22 +414,22 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             matches: null, minCount: 0, completeOnPrompt: true, quietTime: null, cancellationToken);
     }
 
-    /// <summary>FUNCTION 0/3: enable (or disable) Selcall output — RING messages for incoming
+    /// <summary>FUNCTION 0/3: enable (or disable) Selcall output - RING messages for incoming
     /// Selcall calls, and the destination-ID prefix on <see cref="CcdiRingMessage.CallerId"/>.</summary>
     public Task SetSelcallRingOutputAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
             new CcdiFrame('f', enable ? "031" : "030"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 0/4/2–3: enable (or disable, the power-up default) KEYPRESS progress
-    /// messages (PROGRESS type 23 — key number + down/up/short/long). TM8200 v2.05+ only
+    /// <summary>FUNCTION 0/4/2-3: enable (or disable, the power-up default) KEYPRESS progress
+    /// messages (PROGRESS type 23 - key number + down/up/short/long). TM8200 v2.05+ only
     /// (§1.9.3 footnote d); a TM8100 answers with an error.</summary>
     public Task SetKeypressProgressMessagesAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
             new CcdiFrame('f', enable ? "042" : "043"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 0/5/0–1: enable (or disable, the power-up default) unsolicited
+    /// <summary>FUNCTION 0/5/0-1: enable (or disable, the power-up default) unsolicited
     /// channel-change PROGRESS messages (type 21) on every retune. Distinct from the solicited
     /// one-shot report of <see cref="QueryCurrentChannelAsync"/> (0/5/2).</summary>
     public Task SetChannelProgressMessagesAsync(bool enable, CancellationToken cancellationToken = default) =>
@@ -432,28 +438,28 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
     /// <summary>FUNCTION 1/0: when enabled, the radio pushes each received SDM to the serial
-    /// port as an unsolicited GET_SDM message (surfaced via <see cref="SdmReceived"/>) — no
+    /// port as an unsolicited GET_SDM message (surfaced via <see cref="SdmReceived"/>) - no
     /// <see cref="ReadBufferedSdmAsync"/> QUERY required.</summary>
     public Task SetSdmOutputOnReceptionAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
             new CcdiFrame('f', enable ? "101" : "100"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 1/1: enable (or disable) SDM caller-ID encode — the sender's ID goes
+    /// <summary>FUNCTION 1/1: enable (or disable) SDM caller-ID encode - the sender's ID goes
     /// out as a separate SDM before the SDM itself.</summary>
     public Task SetSdmCallerIdEncodeAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
             new CcdiFrame('f', enable ? "111" : "110"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 1/2: enable (or disable) SDM caller-ID decode — a received caller-ID
+    /// <summary>FUNCTION 1/2: enable (or disable) SDM caller-ID decode - a received caller-ID
     /// SDM is decoded before the incoming SDM it precedes.</summary>
     public Task SetSdmCallerIdDecodeAsync(bool enable, CancellationToken cancellationToken = default) =>
         TransactAsync(
             new CcdiFrame('f', enable ? "121" : "120"), matches: null, minCount: 0,
             completeOnPrompt: true, quietTime: null, cancellationToken);
 
-    /// <summary>FUNCTION 4: user-controls lockout — selectively disable the radio's front
+    /// <summary>FUNCTION 4: user-controls lockout - selectively disable the radio's front
     /// panel while under computer control. The power-up default is
     /// <see cref="TaitUserControls.EnableAll"/>.</summary>
     public Task SetUserControlsAsync(TaitUserControls mode, CancellationToken cancellationToken = default) =>
@@ -462,7 +468,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             matches: null, minCount: 0, completeOnPrompt: true, quietTime: null, cancellationToken);
 
     /// <summary>FUNCTION 7: activate (or deactivate) validation of CTCSS/DCS subaudible
-    /// signaling on incoming FFSK data — when active, data is only processed if the subaudible
+    /// signaling on incoming FFSK data - when active, data is only processed if the subaudible
     /// signaling matches (only effective on channels programmed for it). The power-up default
     /// follows the radio's 'Ignore DCS/CTCSS' programming.</summary>
     public Task SetSubaudibleValidationAsync(bool validate, CancellationToken cancellationToken = default) =>
@@ -475,7 +481,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// </summary>
     /// <param name="key">Which key (the PROGRESS type-23 key-number table).</param>
     /// <param name="durationCode">Press duration code: 0 = constantly off (release),
-    /// 1–8 = that many eighths of a second, 9 = constantly on (hold until a later 0).</param>
+    /// 1-8 = that many eighths of a second, 9 = constantly on (hold until a later 0).</param>
     /// <param name="cancellationToken">Cancels waiting for the radio's acknowledgement.</param>
     public Task SimulateKeyPressAsync(TaitKey key, int durationCode, CancellationToken cancellationToken = default)
     {
@@ -489,7 +495,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
 
     /// <summary>GO_TO_CHANNEL (§1.9.4): retune to a programmed conventional channel. Denied by
     /// the radio (not-ready error) while in emergency mode.</summary>
-    /// <param name="channel">Channel number, 1–4 digits.</param>
+    /// <param name="channel">Channel number, 1-4 digits.</param>
     /// <param name="zone">Zone (TM8200 only); TM8100 radios reject a zone-qualified change.</param>
     /// <param name="cancellationToken">Cancels waiting for the radio's acknowledgement.</param>
     public Task GoToChannelAsync(int channel, int? zone = null, CancellationToken cancellationToken = default)
@@ -528,7 +534,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ArgumentException.ThrowIfNullOrEmpty(number);
         if (number.Length > 32)
         {
-            throw new ArgumentException("dial strings are limited to 32 digits (§1.9.2)", nameof(number));
+            throw new ArgumentException("dial strings are limited to 32 digits (section 1.9.2)", nameof(number));
         }
         return TransactAsync(
             new CcdiFrame('d', (int)type + number), matches: null, minCount: 0,
@@ -536,7 +542,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     }
 
     /// <summary>
-    /// SEND_ADAPTABLE_SDM (§1.9.8): transmit a short data message radio-to-radio over the air —
+    /// SEND_ADAPTABLE_SDM (§1.9.8): transmit a short data message radio-to-radio over the air -
     /// no TNC involved; the radio's own FFSK modem carries it. The receiving radio raises
     /// PROGRESS 'FFSK data received' (and a RING for valid addressed SDMs) and buffers the
     /// message for <see cref="ReadBufferedSdmAsync"/>.
@@ -554,7 +560,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ArgumentNullException.ThrowIfNull(message);
         if (message.Length > PlainSdmMaxLength)
         {
-            throw new ArgumentException("plain SDMs are limited to 32 characters (§1.9.8)", nameof(message));
+            throw new ArgumentException("plain SDMs are limited to 32 characters (section 1.9.8)", nameof(message));
         }
         return SendAdaptableSdmAsync(
             dataMessageId, message, gfi: '2', sfi: "00", leadInDelay, cancellationToken);
@@ -562,13 +568,13 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
 
     /// <summary>
     /// Extended SDM (§1.9.8, GFI 2 / SFI 04): a text short data message of up to 128 characters
-    /// in ONE command — the radio itself splits it into multiple over-air SDMs (continuations
+    /// in ONE command - the radio itself splits it into multiple over-air SDMs (continuations
     /// tagged SFI 05) and the <em>receiving</em> radio reassembles them natively: its one-deep
     /// buffer presents the complete message in a single RING /
     /// <see cref="ReadBufferedSdmAsync"/> read.
     /// </summary>
     /// <remarks>
-    /// Hardware-verified TM8110↔TM8110 (CCDI 03.02, 2026-07-03): 100- and 128-character
+    /// Hardware-verified TM8110 to TM8110 (CCDI 03.02, 2026-07-03): 100- and 128-character
     /// messages each transmitted as two FFSK bursts (two 'FFSK data received' PROGRESS
     /// messages at the receiver), then one RING with the fully reassembled message buffered;
     /// the SDM auto-acknowledge delivery receipt (PROGRESS 1D) covers the whole message.
@@ -588,7 +594,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ArgumentNullException.ThrowIfNull(message);
         if (message.Length > ExtendedSdmMaxLength)
         {
-            throw new ArgumentException("extended SDMs are limited to 128 characters (§1.9.8)", nameof(message));
+            throw new ArgumentException("extended SDMs are limited to 128 characters (section 1.9.8)", nameof(message));
         }
         return SendAdaptableSdmAsync(
             dataMessageId, message, gfi: '2', sfi: "04", leadInDelay, cancellationToken);
@@ -596,19 +602,19 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
 
     /// <summary>
     /// Binary SDM (§1.9.8, GFI 1): a short data message of raw bytes. Up to 32 bytes go as a
-    /// plain SDM (SFI 00); 33–128 bytes go as an extended SDM (SFI 04 — the radios split and
+    /// plain SDM (SFI 00); 33-128 bytes go as an extended SDM (SFI 04 - the radios split and
     /// reassemble natively, see <see cref="SendExtendedSdmAsync"/>). Hardware-verified
-    /// TM8110↔TM8110: bytes arrive verbatim in the receiver's buffer, both plain and extended.
+    /// TM8110 to TM8110: bytes arrive verbatim in the receiver's buffer, both plain and extended.
     /// </summary>
     /// <remarks>
-    /// The bytes <c>0x0D</c> (CR — the CCDI frame terminator), <c>0x0A</c>, <c>0x11</c> and
-    /// <c>0x13</c> (XON/XOFF — the link may use software flow control, §1.6.1) are refused:
-    /// they would corrupt CCDI line framing on the serial leg. All other values 0x00–0xFF are
+    /// The bytes <c>0x0D</c> (CR - the CCDI frame terminator), <c>0x0A</c>, <c>0x11</c> and
+    /// <c>0x13</c> (XON/XOFF - the link may use software flow control, §1.6.1) are refused:
+    /// they would corrupt CCDI line framing on the serial leg. All other values 0x00-0xFF are
     /// allowed.
     /// </remarks>
     /// <param name="dataMessageId">8-character destination data identity; '*' wildcards per
     /// character.</param>
-    /// <param name="message">1–128 bytes; see remarks for the four refused values.</param>
+    /// <param name="message">1-128 bytes; see remarks for the four refused values.</param>
     /// <param name="leadInDelay">Carrier lead-in before data, 20 ms granularity, max 5.1 s.
     /// Null uses 100 ms.</param>
     /// <param name="cancellationToken">Cancels waiting for the radio's acknowledgement.</param>
@@ -618,7 +624,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     {
         if (message.Length > ExtendedSdmMaxLength)
         {
-            throw new ArgumentException("binary SDMs are limited to 128 bytes (§1.9.8)", nameof(message));
+            throw new ArgumentException("binary SDMs are limited to 128 bytes (section 1.9.8)", nameof(message));
         }
         var span = message.Span;
         var chars = new char[span.Length];
@@ -629,7 +635,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             {
                 throw new ArgumentException(
                     $"binary SDM byte 0x{b:X2} at offset {i} would corrupt CCDI line framing " +
-                    "(CR/LF terminate frames; XON/XOFF may be software flow control, §1.6.1)",
+                    "(CR/LF terminate frames; XON/XOFF may be software flow control, section 1.6.1)",
                     nameof(message));
             }
             chars[i] = (char)b;
@@ -640,9 +646,9 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     }
 
     /// <summary>
-    /// SEND_SDM (§1.9.7): the legacy fixed-format SDM send — kept by the protocol (and this
+    /// SEND_SDM (§1.9.7): the legacy fixed-format SDM send - kept by the protocol (and this
     /// driver) only for backwards compatibility with pre-adaptable-SDM peers;
-    /// <see cref="SendSdmAsync"/> supersedes it. Hardware-verified TM8110↔TM8110: delivered,
+    /// <see cref="SendSdmAsync"/> supersedes it. Hardware-verified TM8110 to TM8110: delivered,
     /// RINGed and auto-acknowledged exactly like a plain adaptable SDM.
     /// </summary>
     /// <param name="dataMessageId">8-character destination data identity; '*' wildcards per
@@ -659,7 +665,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ArgumentNullException.ThrowIfNull(message);
         if (message.Length > PlainSdmMaxLength)
         {
-            throw new ArgumentException("SEND_SDM messages are limited to 32 characters (§1.9.7)", nameof(message));
+            throw new ArgumentException("SEND_SDM messages are limited to 32 characters (section 1.9.7)", nameof(message));
         }
         string parameters = string.Create(
             CultureInfo.InvariantCulture, $"{LeadInUnits(leadInDelay):X2}{dataMessageId}{message}");
@@ -673,10 +679,10 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// adaptable SDM whose message is stripped and executed as a <b>CCR command</b> by a
     /// receiving radio that supports CCR and is currently in CCR mode. The
     /// <paramref name="ccrCommand"/> travels in its full CCR wire form (ident + size + params +
-    /// checksum, no CR — the manual's worked example carries <c>M01D0E</c>).
+    /// checksum, no CR - the manual's worked example carries <c>M01D0E</c>).
     /// </summary>
     /// <remarks>
-    /// <b>⚠ This is remote radio CONTROL, not messaging</b> — see
+    /// <b>⚠ This is remote radio CONTROL, not messaging</b> - see
     /// <see cref="UnsafeSendCcrOverSdmAsync"/> for the warnings that apply to actually
     /// transmitting one. Unit-tested against the manual's worked example
     /// (<c>a130520312345678M01D0E36</c>).
@@ -696,7 +702,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         if (encodedCcr.Length > PlainSdmMaxLength)
         {
             throw new ArgumentException(
-                "CCR-over-SDM commands are limited to 32 encoded characters (§1.9.8)", nameof(ccrCommand));
+                "CCR-over-SDM commands are limited to 32 encoded characters (section 1.9.8)", nameof(ccrCommand));
         }
         string parameters = string.Create(
             CultureInfo.InvariantCulture, $"{LeadInUnits(leadInDelay):X2}203{dataMessageId}{encodedCcr}");
@@ -705,14 +711,14 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
 
     /// <summary>
     /// Transmit a CCR command <b>into another radio</b> over the air (§1.9.8 "CCR SDM",
-    /// GFI 2 / SFI 03): the addressed radio — which must already be in CCR mode — strips the
+    /// GFI 2 / SFI 03): the addressed radio - which must already be in CCR mode - strips the
     /// SDM's message and executes it as a CCR command.
     /// </summary>
     /// <remarks>
     /// <para>
     /// <b>⚠ This is remote radio CONTROL, not messaging.</b> A CCR command arriving over the
     /// air can retune the receiving radio's frequencies, change its TX power, or key its
-    /// transmitter — with no operator at the receiving end and <b>no consent handshake in the
+    /// transmitter - with no operator at the receiving end and <b>no consent handshake in the
     /// protocol</b>. Only ever aim it at a radio you have explicit authority over; a
     /// consent/capability gate for using this in anything beyond bench tooling is a named
     /// follow-up, and until it exists the method stays
@@ -722,7 +728,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// <para>
     /// Note the receipt semantics: SDM auto-acknowledgement (PROGRESS 1D) reports over-air
     /// <em>delivery</em>; there is no over-air signal that the CCR command was <em>accepted</em>
-    /// (the receiving radio's +/− CCR acknowledgement goes to its own serial port, not back
+    /// (the receiving radio's +/- CCR acknowledgement goes to its own serial port, not back
     /// over the air).
     /// </para>
     /// </remarks>
@@ -763,7 +769,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ArgumentNullException.ThrowIfNull(dataMessageId);
         if (dataMessageId.Length != 8)
         {
-            throw new ArgumentException("the data message ID is exactly 8 characters (§1.9.8)", nameof(dataMessageId));
+            throw new ArgumentException("the data message ID is exactly 8 characters (section 1.9.8)", nameof(dataMessageId));
         }
     }
 
@@ -800,7 +806,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     }
 
     /// <summary>
-    /// TRANSPARENT (§1.9.9 / §1.7): switch the radio into Transparent mode — the serial port
+    /// TRANSPARENT (§1.9.9 / §1.7): switch the radio into Transparent mode - the serial port
     /// becomes a byte pipe through the radio's own FFSK (1200/2400 bit/s) or THSD modem. From
     /// then on <see cref="TransparentDataReceived"/> fires for inbound data,
     /// <see cref="SendTransparentAsync"/> transmits, CCDI transactions are unavailable, and the
@@ -825,22 +831,24 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// Command-mode CCDI baud (§1.8): the <c>t</c> entry command goes out at the command rate,
     /// then the port is re-clocked to the transparent rate for the byte pipe, and back to the
     /// command rate after the escape. On a rig where both rates match (the common case) it is
-    /// never called. Not a general runtime knob — CCDI transactions assume the programmed rate.
+    /// never called. Not a general runtime knob: CCDI transactions assume the programmed rate,
+    /// so anything that re-clocks the port owns putting it back.
     /// </summary>
-    internal void SetSerialBaudRate(int baudRate) => io.SetBaudRate(baudRate);
+    public void SetSerialBaudRate(int baudRate) => io.SetBaudRate(baudRate);
 
     /// <summary>
-    /// Run the §1.7.2 escape guard sequence (idle — escape char ×3 — idle) <b>blind</b>: no
+    /// Run the §1.7.2 escape guard sequence (idle - escape char ×3 - idle) <b>blind</b>: no
     /// mode precondition and no driver-mode mutation. The stale-Transparent recovery primitive
-    /// for <see cref="TaitTransparentTransport"/>: a radio whose previous session's pipe died
+    /// for a Transparent-mode transport (<c>Packet.Ax25.Radio.Tait</c>): a radio whose previous
+    /// session's pipe died
     /// before teardown is still a Transparent byte pipe while this freshly-opened driver believes
-    /// it is in Command mode — <see cref="ExitTransparentModeAsync"/> and
+    /// it is in Command mode - <see cref="ExitTransparentModeAsync"/> and
     /// <see cref="EscapeAndVerifyTransparentAsync"/> both refuse that state, so this writes the
     /// escape without asking. The caller proves the outcome (e.g. by retrying the <c>t</c> entry);
     /// on a radio already in Command mode the three characters are harmless CCDI noise, and on a
     /// radio programmed "Ignore Escape Sequence" ON they are transmitted over the air as data.
     /// </summary>
-    internal async Task EscapeTransparentBlindAsync(
+    public async Task EscapeTransparentBlindAsync(
         char escapeChar, TimeSpan guardTime, CancellationToken cancellationToken = default)
     {
         byte esc = (byte)escapeChar;
@@ -862,7 +870,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Escape from Transparent mode (§1.7.2): 2 s idle, escape char ×3, 2 s idle —
+    /// <summary>Escape from Transparent mode (§1.7.2): 2 s idle, escape char ×3, 2 s idle -
     /// then Command mode is back. Takes a little over 4 s by protocol design.</summary>
     public async Task ExitTransparentModeAsync(CancellationToken cancellationToken = default)
     {
@@ -886,13 +894,13 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     }
 
     /// <summary>
-    /// Best-effort <b>verified</b> recovery from Transparent mode — the primitive the
+    /// Best-effort <b>verified</b> recovery from Transparent mode - the primitive the
     /// Transparent-readiness doctor uses to detect an "Ignore Escape Sequence" lockout without
-    /// wedging blindly. Runs the §1.7.2 escape guard sequence (idle — escape char ×3 — idle) up
+    /// wedging blindly. Runs the §1.7.2 escape guard sequence (idle - escape char ×3 - idle) up
     /// to <paramref name="attempts"/> times, and after each escape <b>confirms with a MODEL
     /// query</b> that Command mode was actually regained. Returns <c>true</c> as soon as a MODEL
     /// query answers (the radio is then left in Command mode); returns <c>false</c> if every
-    /// attempt's confirmation times out — the radio is genuinely <b>wedged</b> in Transparent
+    /// attempt's confirmation times out - the radio is genuinely <b>wedged</b> in Transparent
     /// (programmed "Ignore Escape Sequence" ON) and only a power cycle recovers it.
     /// <para>
     /// Unlike <see cref="ExitTransparentModeAsync"/>, which trusts the escape and flips the driver
@@ -906,7 +914,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// <param name="verifyTimeout">How long to wait for the confirming MODEL reply per attempt
     /// (default 3 s).</param>
     /// <param name="cancellationToken">Cancels the run. Cancelling mid-recovery can leave the
-    /// radio in Transparent mode — the caller owns that risk.</param>
+    /// radio in Transparent mode - the caller owns that risk.</param>
     /// <returns><c>true</c> when Command mode was proven regained (radio left in Command mode);
     /// <c>false</c> when the radio remains wedged in Transparent after every attempt.</returns>
     public async Task<bool> EscapeAndVerifyTransparentAsync(
@@ -934,7 +942,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             // §1.7.2 escape dance: idle, escape char ×3, idle. (When the radio honours the escape
-            // these bytes are intercepted locally; when it ignores it they are transmitted — the
+            // these bytes are intercepted locally; when it ignores it they are transmitted - the
             // very failure we are probing for, and why this is gated behind the doctor's interrupt.)
             await Task.Delay(guard, clock, cancellationToken).ConfigureAwait(false);
             io.Write(escape, 0, escape.Length);
@@ -955,7 +963,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             {
                 _ = await ExpectOneAsync<CcdiModelMessage>(new CcdiFrame('q', ""), attemptCts.Token)
                     .ConfigureAwait(false);
-                return true; // a MODEL query answered → Command mode is proven back
+                return true; // a MODEL query answered -> Command mode is proven back
             }
             catch (Exception ex)
                 when ((ex is TimeoutException or OperationCanceledException) && !cancellationToken.IsCancellationRequested)
@@ -972,12 +980,12 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             }
         }
 
-        return false; // wedged in Transparent — a power cycle is the only recovery
+        return false; // wedged in Transparent - a power cycle is the only recovery
     }
 
     /// <summary>
     /// FUNCTION 0/0 (§2.5.1, TM8100 only): switch the radio into CCR (Computer-Controlled
-    /// Radio) mode — the run-time channel-programming interpreter: direct RX/TX frequency in
+    /// Radio) mode - the run-time channel-programming interpreter: direct RX/TX frequency in
     /// Hz, TX power, bandwidth, CTCSS/DCS, Selcall, volume. The returned session owns the port
     /// until <see cref="TaitCcrSession.ExitAsync"/> (which soft-resets the radio); CCDI
     /// commands are unavailable meanwhile, and nothing configured in CCR survives the exit.
@@ -1160,7 +1168,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
                 if (completeOnPrompt && txn.Error is null)
                 {
                     // Observed on hardware: the radio prompts BEFORE the ERROR of a rejected
-                    // command (a programming-disabled SDM answers ".e03006A2\r." — prompt
+                    // command (a programming-disabled SDM answers ".e03006A2\r." - prompt
                     // first). Give a trailing rejection a beat to arrive before declaring
                     // success; at 28800 baud it lands within ~10 ms.
                     await Task.Delay(options.PromptErrorGrace, clock, cancellationToken).ConfigureAwait(false);
@@ -1223,7 +1231,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             catch (Exception ex)
             {
                 // Port closed under us (dispose path) or hard IO failure: stop pumping. That is
-                // an interface hang-up, not a quiet channel — surface it.
+                // an interface hang-up, not a quiet channel - surface it.
                 if (Volatile.Read(ref disposed) == 0)
                 {
                     MarkFaulted(new IOException($"serial read failed on {PortName}", ex));
@@ -1260,7 +1268,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
                         break;
                     case '\n':
                     case '\x11': // XON
-                    case '\x13': // XOFF — the radio may use software flow control (§1.6.1)
+                    case '\x13': // XOFF - the radio may use software flow control (§1.6.1)
                         break;
                     case '.' when line.Length == 0:
                         OnPrompt();
@@ -1277,7 +1285,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     {
         if (!CcdiFrame.TryParse(rawLine, out var frame))
         {
-            return; // line noise / partial line from before open — normal on an async serial link
+            return; // line noise / partial line from before open - normal on an async serial link
         }
 
         var message = CcdiMessage.Decode(frame);
@@ -1426,16 +1434,16 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         }
         catch (InvalidOperationException)
         {
-            // Mode changed under a probe (e.g. CCR entry raced the watchdog) — next tick adapts.
+            // Mode changed under a probe (e.g. CCR entry raced the watchdog) - next tick adapts.
         }
     }
 
     /// <summary>
-    /// Stale-DCD re-validation (#576, bench spike items 9–11): a busy state latched for
-    /// <paramref name="staleAfter"/> without a clear edge is suspect — the classic cause is a lost
+    /// Stale-DCD re-validation (#576, bench spike items 9-11): a busy state latched for
+    /// <paramref name="staleAfter"/> without a clear edge is suspect - the classic cause is a lost
     /// DCD-clear PROGRESS message, whose effect is every subsequent keyup deferring the CSMA
     /// gate's full MaxWait. Probe the radio; if it does not answer, reset busy to <c>null</c>
-    /// (unknown ⇒ fail-open) and raise a final carrier-clear edge so event-driven consumers agree
+    /// (unknown => fail-open) and raise a final carrier-clear edge so event-driven consumers agree
     /// with the cleared state. A responsive radio keeps its state and the staleness timer re-arms.
     /// </summary>
     private async Task RevalidateStaleBusyAsync(TimeSpan staleAfter, CancellationToken cancellationToken)
@@ -1578,7 +1586,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         if (mustUnkey)
         {
             // A radio latched in TX by FUNCTION 9 stays keyed until told otherwise (§1.9.3
-            // note 5) — best-effort unkey is non-negotiable on the way out.
+            // note 5) - best-effort unkey is non-negotiable on the way out.
             try
             {
                 byte[] unkey = new CcdiFrame('f', "90").EncodeToBytes();

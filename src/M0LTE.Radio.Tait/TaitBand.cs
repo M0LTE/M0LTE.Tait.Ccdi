@@ -1,4 +1,4 @@
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// One Tait TM8100/TM8200 <b>band split</b>: the two-character band designator (e.g. <c>B1</c>),

@@ -1,4 +1,4 @@
-namespace Packet.Radio;
+namespace M0LTE.Radio;
 
 /// <summary>
 /// A control/telemetry channel to the radio behind a modem - the seam OQ-011 asked for.

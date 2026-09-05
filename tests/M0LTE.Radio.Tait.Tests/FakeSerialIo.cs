@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>Scripted <see cref="ISerialIo"/>: blocking reads against an in-memory queue,
 /// with optional canned responses keyed on written command lines.</summary>

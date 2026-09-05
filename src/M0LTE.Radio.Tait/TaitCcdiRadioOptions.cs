@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>Behavioural knobs for <see cref="TaitCcdiRadio"/>.</summary>
 public sealed record TaitCcdiRadioOptions
@@ -21,7 +21,7 @@ public sealed record TaitCcdiRadioOptions
     /// Stale-DCD re-validation (#576): when <see cref="TaitCcdiRadio.ChannelBusy"/> has been
     /// latched <c>true</c> for this long without a clear edge - implausible on a packet channel,
     /// and the observed effect of a lost DCD-clear PROGRESS message - the watchdog issues a
-    /// solicited probe. An unresponsive radio has its busy state reset to <c>null</c> (unknown ⇒
+    /// solicited probe. An unresponsive radio has its busy state reset to <c>null</c> (unknown =>
     /// the CSMA gate fails open) with a final carrier-clear <see cref="TaitCcdiRadio.CarrierSenseChanged"/>;
     /// a responsive radio keeps its state and the timer re-arms. <c>null</c> disables. Default 30 s
     /// (same order as <see cref="KeepAliveInterval"/> - the two share the watchdog loop).

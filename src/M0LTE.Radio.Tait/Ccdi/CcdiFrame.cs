@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Packet.Radio.Tait.Ccdi;
+namespace M0LTE.Radio.Tait.Ccdi;
 
 /// <summary>
 /// CCDI wire framing (manual §1.8.3): <c>[IDENT][SIZE][PARAMETERS][CHECKSUM]&lt;CR&gt;</c> where
@@ -39,7 +39,7 @@ public readonly record struct CcdiFrame(char Ident, string Parameters)
         if (parameters.Length > MaxParameterLength)
         {
             throw new ArgumentException(
-                "CCDI SIZE is two hex digits (§1.8.3), so a frame carries at most " +
+                "CCDI SIZE is two hex digits (section 1.8.3), so a frame carries at most " +
                 $"{MaxParameterLength} parameter characters, not {parameters.Length}",
                 nameof(parameters));
         }
@@ -50,7 +50,7 @@ public readonly record struct CcdiFrame(char Ident, string Parameters)
             {
                 throw new ArgumentException(
                     $"parameter character 0x{(int)c:X2} at offset {i} would corrupt CCDI line framing " +
-                    "(CR/LF terminate frames; XON/XOFF may be software flow control, §1.6.1)",
+                    "(CR/LF terminate frames; XON/XOFF may be software flow control, section 1.6.1)",
                     nameof(parameters));
             }
         }

@@ -1,14 +1,14 @@
 using System.IO.Ports;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// The narrow byte-level seam <see cref="TaitCcdiRadio"/> drives the wire over - same pattern
-/// as <c>Packet.Kiss.Serial</c>'s <c>ISerialPortIo</c>: blocking finite-timeout reads, blocking
+/// blocking finite-timeout reads, blocking
 /// writes, and a name. Production wraps a <see cref="SerialPort"/>; tests substitute a scripted
 /// fake so transactions, unsolicited demux, and dispose ordering run without hardware.
 /// </summary>
-internal interface ISerialIo : IDisposable
+public interface ISerialIo : IDisposable
 {
     /// <summary>The underlying port name (e.g. <c>/dev/ttyUSB0</c>).</summary>
     string PortName { get; }

@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Time.Testing;
-using Packet.Radio;
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 public class TaitCcdiRadioTests
 {
@@ -33,8 +33,8 @@ public class TaitCcdiRadioTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo(EnterTransparent(), ".");                     // enter Transparent OK
-        io.RespondTo(ModelQuery(), ".m0813203.02A2\r.");           // a MODEL query answers → Command mode back
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
+        io.RespondTo(ModelQuery(), ".m0813203.02A2\r.");           // a MODEL query answers -> Command mode back
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
         await radio.EnterTransparentModeAsync();
         radio.Mode.Should().Be(TaitProtocolMode.Transparent);
 
@@ -52,8 +52,8 @@ public class TaitCcdiRadioTests
         using var io = new FakeSerialIo();
         io.RespondTo(EnterTransparent(), ".");                     // enter Transparent OK
         // No response to the MODEL query: the radio ignores the escape (Ignore-Escape ON) and stays
-        // a Transparent byte pipe, so the confirming query never answers → wedged.
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
+        // a Transparent byte pipe, so the confirming query never answers -> wedged.
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
         await radio.EnterTransparentModeAsync();
 
         bool recovered = await radio.EscapeAndVerifyTransparentAsync(
@@ -67,7 +67,7 @@ public class TaitCcdiRadioTests
     public async Task EscapeAndVerify_Throws_When_Not_In_Transparent_Mode()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
+        await using var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions { KeepAliveInterval = null });
 
         var act = async () => await radio.EscapeAndVerifyTransparentAsync(
             guardTime: TimeSpan.FromMilliseconds(10), verifyTimeout: TimeSpan.FromMilliseconds(150));
@@ -80,7 +80,7 @@ public class TaitCcdiRadioTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("q0450645C", ".j07064-456C9\r.");
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         float rssi = await radio.ReadRssiDbmAsync();
 
@@ -92,7 +92,7 @@ public class TaitCcdiRadioTests
     public async Task Unsolicited_Progress_Raises_CarrierSense_And_Tracks_ChannelBusy()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         var edges = new List<CarrierSenseChange>();
         var seen = new SemaphoreSlim(0);
         radio.CarrierSenseChanged += (_, e) =>
@@ -123,7 +123,7 @@ public class TaitCcdiRadioTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("q0450645C", ".e03001A7\r.");
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         var act = async () => await radio.ReadRssiDbmAsync();
 
@@ -138,7 +138,7 @@ public class TaitCcdiRadioTests
         // (".e03006A2\r." for an SDM the radio's programming disables).
         using var io = new FakeSerialIo();
         io.RespondTo("f0281CF", ".e03006A2\r.");
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         var act = async () => await radio.SetMonitorAsync(true);
 
@@ -151,7 +151,7 @@ public class TaitCcdiRadioTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("f0291CE", ".");
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SetTransmitterAsync(true);
 
@@ -163,7 +163,7 @@ public class TaitCcdiRadioTests
     {
         var io = new FakeSerialIo();
         io.RespondTo("f0291CE", ".");
-        var radio = TaitCcdiRadio.OpenForTest(io);
+        var radio = TaitCcdiRadio.Open(io);
         await radio.SetTransmitterAsync(true);
 
         await radio.DisposeAsync();
@@ -178,7 +178,7 @@ public class TaitCcdiRadioTests
         var io = new FakeSerialIo();
         // Nothing answers the key: the radio takes the 'f91' bytes and never prompts, so the
         // command fails with the transmitter quite possibly keyed (#698).
-        var radio = TaitCcdiRadio.OpenForTest(io, Quiet() with { TransactionTimeout = TimeSpan.FromSeconds(2) }, clock);
+        var radio = TaitCcdiRadio.Open(io, Quiet() with { TransactionTimeout = TimeSpan.FromSeconds(2) }, clock);
 
         var keying = radio.SetTransmitterAsync(true).AsTask();
         await AdvanceUntilSettledAsync(clock, keying);
@@ -202,7 +202,7 @@ public class TaitCcdiRadioTests
         io.RespondTo(EnterTransparent(), ".");
         // No MODEL answer, and a transaction deadline far beyond the verify budget: only the
         // verify budget can end the attempt, and only if it runs on the injected clock.
-        await using var radio = TaitCcdiRadio.OpenForTest(
+        await using var radio = TaitCcdiRadio.Open(
             io,
             Quiet() with { PromptErrorGrace = TimeSpan.Zero, TransactionTimeout = TimeSpan.FromMinutes(10) },
             clock);
@@ -220,7 +220,7 @@ public class TaitCcdiRadioTests
     public async Task TransactRaw_Refuses_Parameters_Longer_Than_A_Two_Digit_Size()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io, Quiet());
+        await using var radio = TaitCcdiRadio.Open(io, Quiet());
 
         var act = async () => await radio.TransactRawAsync('q', new string('A', 256));
 
@@ -236,7 +236,7 @@ public class TaitCcdiRadioTests
     public async Task TransactRaw_Refuses_Parameters_That_Would_Corrupt_Line_Framing(char forbidden)
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io, Quiet());
+        await using var radio = TaitCcdiRadio.Open(io, Quiet());
 
         var act = async () => await radio.TransactRawAsync('q', $"AB{forbidden}CD");
 
@@ -248,7 +248,7 @@ public class TaitCcdiRadioTests
     public async Task Corrupt_Lines_Are_Ignored_And_Do_Not_Break_The_Pump()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         io.Enqueue("\xEB\xF9garbage\r");
         io.RespondTo("q0450645C", ".j07064-899BE\r.");

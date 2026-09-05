@@ -1,10 +1,10 @@
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 public class CcdiCodecTests
 {
-    // §1.8.5 worked example: s0D050800TESTHi! → DA
+    // §1.8.5 worked example: s0D050800TESTHi! -> DA
     [Theory]
     [InlineData("s0D050800TESTHi!", "DA")]
     [InlineData("q00", "2F")]      // §1.8.4 minimum-length example q002F
@@ -86,7 +86,7 @@ public class CcdiCodecTests
     }
 
     [Theory]
-    [InlineData("j07064-456C9", 'j', "064-456")] // §1.10.1 example: raw RSSI −45.6 dBm
+    [InlineData("j07064-456C9", 'j', "064-456")] // §1.10.1 example: raw RSSI -45.6 dBm
     [InlineData("m0813203.02A2", 'm', "13203.02")] // live TM8110 capture
     [InlineData("p0205C9", 'p', "05")]           // live capture: receiver busy
     public void Frame_Parses_Valid_Lines(string line, char ident, string parameters)
@@ -193,7 +193,7 @@ public class CcdiCodecTests
     [Fact]
     public void Ring_Message_Decodes_Manual_Example()
     {
-        // §1.10.9 example: r0714000FFA6 — an SDM call.
+        // §1.10.9 example: r0714000FFA6 - an SDM call.
         CcdiFrame.TryParse("r0714000FFA6", out var frame).Should().BeTrue();
         var ring = CcdiMessage.Decode(frame).Should().BeOfType<CcdiRingMessage>().Subject;
         ring.Category.Should().Be('1');

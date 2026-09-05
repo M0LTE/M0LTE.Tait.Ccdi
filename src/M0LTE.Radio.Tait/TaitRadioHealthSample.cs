@@ -1,4 +1,4 @@
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// One radio-health sample taken by <see cref="TaitRadioHealthMonitor"/>. Which fields are

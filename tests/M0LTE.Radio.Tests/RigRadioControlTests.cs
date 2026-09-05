@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Time.Testing;
-using Packet.Rig;
+using M0LTE.Rig;
 
-namespace Packet.Radio.Tests;
+namespace M0LTE.Radio.Tests;
 
 /// <summary>
-/// The rig→radio bridge: capability mapping, poll-synthesized carrier-sense edges, fail-open
+/// The rig->radio bridge: capability mapping, poll-synthesized carrier-sense edges, fail-open
 /// fault handling with the slower retry cadence, RSSI/PTT delegation, and the
 /// disposal/ownership contracts. All timing on a <see cref="FakeTimeProvider"/>.
 /// </summary>
@@ -99,7 +99,7 @@ public sealed class RigRadioControlTests
         }
 
         radio.ChannelBusy.Should().BeTrue();
-        Volatile.Read(ref events).Should().Be(0, "no bool→bool transition ever happened");
+        Volatile.Read(ref events).Should().Be(0, "no bool->bool transition ever happened");
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public sealed class RigRadioControlTests
         await radio.DisposeAsync();
 
         rig.Disposed.Should().BeTrue();
-        rig.PttSets.Should().Be(1, "an owned rig's own dispose guarantees the unkey — no double work");
+        rig.PttSets.Should().Be(1, "an owned rig's own dispose guarantees the unkey - no double work");
     }
 
     [Fact]

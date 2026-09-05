@@ -1,4 +1,4 @@
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// Periodic radio-health sampler over a <see cref="TaitCcdiRadio"/>: on every tick it reads the

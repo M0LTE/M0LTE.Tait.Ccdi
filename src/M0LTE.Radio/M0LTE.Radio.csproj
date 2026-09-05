@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- RigRadioControl presents a CAT rig through the IRadioControl seam. M0LTE.Rig is
+         the dependency-free abstraction package, so this adds no transitive weight. -->
+    <PackageReference Include="M0LTE.Rig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="M0LTE.Radio.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Title>M0LTE.Radio - radio-control abstraction</Title>
+    <Description>Driver-neutral abstraction for the control channel to a radio: RSSI, hardware carrier-sense (DCD) events, transmitter keying (IRadioControl), and a radio-native small-datagram control plane (IRadioSideChannel). Includes RigRadioControl, which presents any M0LTE.Rig CAT rig through the same seam. Concrete drivers plug in underneath (e.g. M0LTE.Radio.Tait). Source: github.com/M0LTE/M0LTE.Radio.</Description>
+    <PackageTags>amateur-radio;radio-control;rssi;dcd;cat;ptt</PackageTags>
+  </PropertyGroup>
+
+</Project>

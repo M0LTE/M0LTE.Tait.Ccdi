@@ -1,15 +1,15 @@
-using Packet.Rig;
+using M0LTE.Rig;
 
-namespace Packet.Radio;
+namespace M0LTE.Radio;
 
 /// <summary>
-/// Surfaces a CAT rig (<c>Packet.Rig</c>'s <see cref="IRigControl"/> - hamlib's <c>rigctld</c>,
-/// flrig, …) as the packet stack's radio-control seam: the rig's receive-side reads
+/// Surfaces a CAT rig (<c>M0LTE.Rig</c>'s <see cref="IRigControl"/> - hamlib's <c>rigctld</c>,
+/// flrig, ...) as the packet stack's radio-control seam: the rig's receive-side reads
 /// (<see cref="IRigControl.ReadDcdAsync"/> / <see cref="IRigControl.ReadSignalStrengthDbmAsync"/>)
 /// become <see cref="ChannelBusy"/>/<see cref="CarrierSenseChanged"/> and
 /// <see cref="ReadRssiDbmAsync"/>, and <see cref="IRigControl.SetPttAsync"/> becomes
 /// <see cref="SetTransmitterAsync"/>. The inverse-direction sibling of
-/// <c>Packet.Radio.Tait</c>'s <c>TaitRigControl</c> (a radio re-presented through the rig seam):
+/// <c>M0LTE.Radio.Tait</c>'s <c>TaitRigControl</c> (a radio re-presented through the rig seam):
 /// here a rig is re-presented through the radio seam, so a CAT transceiver can feed the same
 /// CSMA gate and per-frame RSSI machinery a push-capable PMR radio does.
 /// </summary>
@@ -19,7 +19,7 @@ namespace Packet.Radio;
 /// so DCD is sampled by an owned loop at <see cref="RigRadioControlOptions.DcdPollInterval"/>
 /// and <see cref="CarrierSenseChanged"/> edges are synthesized from consecutive samples - a
 /// poll-based source cannot see edges shorter than the poll interval. A failed read
-/// (<see cref="RigException"/>) marks <see cref="ChannelBusy"/> <c>null</c> (unknown ⇒ the CSMA
+/// (<see cref="RigException"/>) marks <see cref="ChannelBusy"/> <c>null</c> (unknown => the CSMA
 /// gate fails open) and backs off to <see cref="RigRadioControlOptions.FaultRetryInterval"/>;
 /// the rig backend re-dials on the next call, so the loop self-heals on the next successful
 /// read. Recovery repopulates <see cref="ChannelBusy"/> and fires an edge only if the
@@ -29,9 +29,9 @@ namespace Packet.Radio;
 /// </para>
 /// <para>
 /// <b>Capability mapping</b> is computed once at construction:
-/// <see cref="RigCapabilities.DcdRead"/> → <see cref="RadioCapabilities.CarrierSense"/>,
-/// <see cref="RigCapabilities.SignalStrengthRead"/> → <see cref="RadioCapabilities.RssiRead"/>,
-/// <see cref="RigCapabilities.PttSet"/> → <see cref="RadioCapabilities.TransmitterControl"/>.
+/// <see cref="RigCapabilities.DcdRead"/> -> <see cref="RadioCapabilities.CarrierSense"/>,
+/// <see cref="RigCapabilities.SignalStrengthRead"/> -> <see cref="RadioCapabilities.RssiRead"/>,
+/// <see cref="RigCapabilities.PttSet"/> -> <see cref="RadioCapabilities.TransmitterControl"/>.
 /// A rig advertising none of the three is rejected with <see cref="ArgumentException"/> - it
 /// offers nothing the packet-medium seam can use.
 /// </para>
@@ -98,7 +98,7 @@ public sealed class RigRadioControl : IRadioControl
         if (caps == RadioCapabilities.None)
         {
             throw new ArgumentException(
-                "The rig advertises none of DcdRead / SignalStrengthRead / PttSet — nothing the " +
+                "The rig advertises none of DcdRead / SignalStrengthRead / PttSet - nothing the " +
                 "packet-medium seam can use.", nameof(rig));
         }
 
@@ -144,7 +144,7 @@ public sealed class RigRadioControl : IRadioControl
         if (!Capabilities.HasFlag(RadioCapabilities.RssiRead))
         {
             throw new NotSupportedException(
-                "The rig does not advertise SignalStrengthRead — RSSI cannot be served through " +
+                "The rig does not advertise SignalStrengthRead - RSSI cannot be served through " +
                 "this adapter. Probe Capabilities for RadioCapabilities.RssiRead before calling.");
         }
         return (float)await rig.ReadSignalStrengthDbmAsync(cancellationToken).ConfigureAwait(false);
@@ -157,7 +157,7 @@ public sealed class RigRadioControl : IRadioControl
         if (!Capabilities.HasFlag(RadioCapabilities.TransmitterControl))
         {
             throw new NotSupportedException(
-                "The rig does not advertise PttSet — the transmitter cannot be keyed through " +
+                "The rig does not advertise PttSet - the transmitter cannot be keyed through " +
                 "this adapter. Probe Capabilities for RadioCapabilities.TransmitterControl before calling.");
         }
         // Raise the latch before the command goes out and lower it only after an unkey the rig
@@ -223,7 +223,7 @@ public sealed class RigRadioControl : IRadioControl
         bool edge;
         lock (gate)
         {
-            // Only a genuine bool→bool transition is an edge: the first-ever sample and a
+            // Only a genuine bool->bool transition is an edge: the first-ever sample and a
             // fault-recovery re-observation of the same value merely (re)populate ChannelBusy.
             edge = lastKnownBusy is { } last && last != busy;
             lastKnownBusy = busy;

@@ -1,7 +1,7 @@
 using System.Globalization;
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait;
+namespace M0LTE.Radio.Tait;
 
 /// <summary>
 /// An active CCR (Computer-Controlled Radio) session - the TM8100's run-time
@@ -89,7 +89,7 @@ public sealed class TaitCcrSession
         ArgumentException.ThrowIfNullOrEmpty(tones);
         if (tones.Length is < 2 or > 33)
         {
-            throw new ArgumentException("Selcall sequences are 2-33 tones (§2.8.9)", nameof(tones));
+            throw new ArgumentException("Selcall sequences are 2-33 tones (section 2.8.9)", nameof(tones));
         }
         return AckAsync('S', tones, cancellationToken);
     }
@@ -116,7 +116,7 @@ public sealed class TaitCcrSession
 
     /// <summary>Pulse / ping (§2.8.15). Returns <c>true</c> when the radio has its minimum CCR
     /// configuration (an RX frequency has been set since CCR entry); <c>false</c> means the
-    /// radio rebooted and is on defaults — reprogram it. The manual recommends pulsing every
+    /// radio rebooted and is on defaults - reprogram it. The manual recommends pulsing every
     /// 10 s; <see cref="TaitCcdiRadio"/>'s watchdog uses this automatically in CCR mode.</summary>
     public async Task<bool> PulseAsync(CancellationToken cancellationToken = default)
     {
@@ -186,7 +186,7 @@ public sealed class TaitCcrSession
         {
             if (c is < '0' or > '7')
             {
-                throw new ArgumentException("DCS codes are octal digits (§2.8.7)", nameof(octalCode));
+                throw new ArgumentException("DCS codes are octal digits (section 2.8.7)", nameof(octalCode));
             }
         }
         return octalCode.PadLeft(3, '0');

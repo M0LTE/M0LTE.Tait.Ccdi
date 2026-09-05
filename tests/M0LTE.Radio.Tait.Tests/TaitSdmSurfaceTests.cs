@@ -1,6 +1,6 @@
-using Packet.Radio.Tait.Ccdi;
+using M0LTE.Radio.Tait.Ccdi;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>
 /// The backlog-#5 CCDI surface: SDM variants (extended / binary / legacy), the FUNCTION
@@ -18,7 +18,7 @@ public class TaitSdmSurfaceTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("a1205200PDN00001HELLOFE", Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendSdmAsync("PDN00001", "HELLO");
 
@@ -33,7 +33,7 @@ public class TaitSdmSurfaceTests
         string wire = new CcdiFrame('a', $"05204PDN00001{message}").Encode();
         using var io = new FakeSerialIo();
         io.RespondTo(wire, Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendExtendedSdmAsync("PDN00001", message);
 
@@ -44,7 +44,7 @@ public class TaitSdmSurfaceTests
     public async Task Extended_Sdm_Rejects_Over_128_Characters()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         var act = async () => await radio.SendExtendedSdmAsync("PDN00001", new string('X', 129));
 
@@ -58,7 +58,7 @@ public class TaitSdmSurfaceTests
         // Bench capture: a1105100PDN00001<01>B<7F><FE>B4 - delivered verbatim over air.
         using var io = new FakeSerialIo();
         io.RespondTo("a1105100PDN00001\u0001B\u007F\u00FEB4", Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendBinarySdmAsync("PDN00001", new byte[] { 0x01, 0x42, 0x7F, 0xFE });
 
@@ -73,7 +73,7 @@ public class TaitSdmSurfaceTests
         string wire = new CcdiFrame('a', $"05104PDN00001{new string('A', 33)}").Encode();
         using var io = new FakeSerialIo();
         io.RespondTo(wire, Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendBinarySdmAsync("PDN00001", payload);
 
@@ -88,7 +88,7 @@ public class TaitSdmSurfaceTests
     public async Task Binary_Sdm_Refuses_Framing_Hazard_Bytes(byte hazardous)
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         var act = async () => await radio.SendBinarySdmAsync("PDN00001", new byte[] { 0x41, hazardous });
 
@@ -103,7 +103,7 @@ public class TaitSdmSurfaceTests
         // Bench capture: s1205PDN00001LEGACY-SBD - delivered, RINGed, auto-acknowledged.
         using var io = new FakeSerialIo();
         io.RespondTo("s1205PDN00001LEGACY-SBD", Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendLegacySdmAsync("PDN00001", "LEGACY-S");
 
@@ -117,7 +117,7 @@ public class TaitSdmSurfaceTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo(wire, Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.SendLegacySdmAsync(id, message, TimeSpan.FromMilliseconds(leadInMs));
 
@@ -152,7 +152,7 @@ public class TaitSdmSurfaceTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("a130520312345678M01D0E36", Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await radio.UnsafeSendCcrOverSdmAsync("12345678", new CcdiFrame('M', "D"));
 
@@ -192,7 +192,7 @@ public class TaitSdmSurfaceTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo(wire, Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         Task call = which switch
         {
@@ -231,7 +231,7 @@ public class TaitSdmSurfaceTests
     public async Task Volume_And_KeyPress_Validate_Ranges()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         await ((Func<Task>)(() => radio.SetVolumeAsync(26))).Should().ThrowAsync<ArgumentOutOfRangeException>();
         await ((Func<Task>)(() => radio.SetVolumeAsync(-1))).Should().ThrowAsync<ArgumentOutOfRangeException>();
@@ -245,7 +245,7 @@ public class TaitSdmSurfaceTests
     public async Task Unsolicited_GetSdm_Message_Raises_SdmReceived()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         var received = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         radio.SdmReceived += (_, sdm) => received.TrySetResult(sdm.Data);
 
@@ -260,7 +260,7 @@ public class TaitSdmSurfaceTests
     public async Task SideChannel_Budget_Is_32_By_Default_And_128_With_Extended_Enabled()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         using var plain = new TaitSdmSideChannel(radio);
         plain.MaxPayloadLength.Should().Be(32);
@@ -277,7 +277,7 @@ public class TaitSdmSurfaceTests
         string wire = new CcdiFrame('a', $"05204PDN00001{payload}").Encode();
         using var io = new FakeSerialIo();
         io.RespondTo(wire, Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var channel = new TaitSdmSideChannel(
             radio, new TaitSdmSideChannelOptions { EnableExtendedSdm = true });
 
@@ -291,7 +291,7 @@ public class TaitSdmSurfaceTests
     {
         using var io = new FakeSerialIo();
         io.RespondTo("a1205200PDN00001HELLOFE", Prompt);
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
         using var channel = new TaitSdmSideChannel(
             radio, new TaitSdmSideChannelOptions { EnableExtendedSdm = true });
 
@@ -304,7 +304,7 @@ public class TaitSdmSurfaceTests
     public async Task SideChannel_Rejects_Payloads_Over_Its_Budget()
     {
         using var io = new FakeSerialIo();
-        await using var radio = TaitCcdiRadio.OpenForTest(io);
+        await using var radio = TaitCcdiRadio.Open(io);
 
         using var plain = new TaitSdmSideChannel(radio);
         var actPlain = async () => await plain.SendAsync("PDN00001", new string('Y', 33));

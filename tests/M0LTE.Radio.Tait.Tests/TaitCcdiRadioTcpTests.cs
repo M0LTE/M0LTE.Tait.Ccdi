@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Packet.Radio;
+using M0LTE.Radio;
 
-namespace Packet.Radio.Tait.Tests;
+namespace M0LTE.Radio.Tait.Tests;
 
 /// <summary>
 /// Drives <see cref="TaitCcdiRadio"/> over the TCP-backed <see cref="ISerialIo"/>
@@ -122,7 +122,7 @@ public class TaitCcdiRadioTcpTests
             }
         }
 
-        // The Stage-1 default: no callback ⇒ SetBaudRate is a silent no-op so a raw pipe works.
+        // The Stage-1 default: no callback => SetBaudRate is a silent no-op so a raw pipe works.
         using var raw = await TcpSerialIo.ConnectAsync("127.0.0.1", head.Port);
         var act = () => raw.SetBaudRate(9600);
         act.Should().NotThrow();
