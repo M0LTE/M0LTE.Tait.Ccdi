@@ -5,7 +5,7 @@ namespace M0LTE.Radio.Tait;
 /// <summary>
 /// The station-control (<see cref="IRigControl"/>) view of a Tait CCDI radio - the third,
 /// deliberately-different implementation pressure-testing the <c>M0LTE.Rig</c> abstraction
-/// from the channelised-PMR side (after rigctld and flrig; plan OQ-011). A thin adapter over
+/// from the channelised-PMR side (after rigctld and flrig). A thin adapter over
 /// <see cref="TaitCcdiRadio"/>: the radio object stays the owner of the wire, the packet-medium
 /// seam (<c>IRadioControl</c>: RSSI/DCD/SDM) and everything Tait-native; this class only
 /// re-presents the slice CCDI can honestly serve through the CAT-shaped contract.
@@ -27,7 +27,7 @@ namespace M0LTE.Radio.Tait;
 /// <see cref="TaitCcdiRadio.ReadForwardPowerAsync"/> / <see cref="TaitCcdiRadio.ReadReversePowerAsync"/>.</description></item>
 /// <item><description><b>NOT frequency</b> - the tuned frequency is not CCDI-readable at all
 /// (only the band split is; see <see cref="TaitRadioIdentity.Band"/>), and frequency <em>set</em>
-/// is a CCR-session retune that is still unproven on the bench (plan §5.11). The flags light up
+/// is a CCR-session retune that is still unproven on the bench. The flags light up
 /// when that lands.</description></item>
 /// <item><description><b>NOT mode</b> - an FM PMR radio has no operating-mode concept to
 /// control; this is precisely the divergence the capability flags exist for.</description></item>
@@ -68,12 +68,12 @@ public sealed class TaitRigControl : IRigControl
     /// Wrap <paramref name="radio"/>, querying its identity over the wire to populate
     /// <see cref="Info"/>. The radio must be in Command mode (identity queries don't run over a
     /// Transparent byte pipe). <paramref name="ownsRadio"/> transfers disposal: when true,
-    /// disposing the adapter disposes the radio; when false (the node case - the port supervisor
+    /// disposing the adapter disposes the radio; when false (a host case - a port supervisor
     /// owns the radio) disposal only detaches and best-effort-unkeys anything this adapter keyed.
     /// </summary>
     /// <param name="radio">The CCDI radio to re-present through the rig seam.</param>
     /// <param name="ownsRadio">Whether disposing the adapter also disposes the radio.</param>
-    /// <param name="timeProvider">Clock for the dispose-unkey budget (test seam, plan 2.7);
+    /// <param name="timeProvider">Clock for the dispose-unkey budget (test seam);
     /// null uses the system clock.</param>
     /// <param name="cancellationToken">Cancels the identity query.</param>
     public static async Task<TaitRigControl> CreateAsync(
@@ -87,12 +87,12 @@ public sealed class TaitRigControl : IRigControl
         return new TaitRigControl(radio, ownsRadio, InfoFrom(identity), timeProvider);
     }
 
-    /// <summary>Wrap <paramref name="radio"/> with an already-known identity (the node caches
+    /// <summary>Wrap <paramref name="radio"/> with an already-known identity (a host caches
     /// identity at adoption) - no wire traffic.</summary>
     /// <param name="radio">The CCDI radio to re-present through the rig seam.</param>
     /// <param name="identity">The radio's already-queried identity.</param>
     /// <param name="ownsRadio">Whether disposing the adapter also disposes the radio.</param>
-    /// <param name="timeProvider">Clock for the dispose-unkey budget (test seam, plan 2.7);
+    /// <param name="timeProvider">Clock for the dispose-unkey budget (test seam);
     /// null uses the system clock.</param>
     public static TaitRigControl Create(
         TaitCcdiRadio radio, TaitRadioIdentity identity, bool ownsRadio = false, TimeProvider? timeProvider = null)
@@ -228,8 +228,8 @@ public sealed class TaitRigControl : IRigControl
             // The radio outlives this adapter, so its own dispose-unkey won't run - unkey here.
             try
             {
-                // Budgeted on the injected clock (plan 2.7), so a FakeTimeProvider test can
-                // drive the abandonment instead of waiting two real seconds.
+                // Budgeted on the injected clock, so a FakeTimeProvider test can drive the
+                // abandonment instead of waiting two real seconds.
                 using var cts = new CancellationTokenSource(UnkeyBudget, clock);
                 await radio.SetTransmitterAsync(false, cts.Token).ConfigureAwait(false);
             }

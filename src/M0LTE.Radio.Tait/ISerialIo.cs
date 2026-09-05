@@ -3,10 +3,10 @@ using System.IO.Ports;
 namespace M0LTE.Radio.Tait;
 
 /// <summary>
-/// The narrow byte-level seam <see cref="TaitCcdiRadio"/> drives the wire over - same pattern
-/// blocking finite-timeout reads, blocking
-/// writes, and a name. Production wraps a <see cref="SerialPort"/>; tests substitute a scripted
-/// fake so transactions, unsolicited demux, and dispose ordering run without hardware.
+/// The narrow byte-level seam <see cref="TaitCcdiRadio"/> drives the wire over: blocking
+/// finite-timeout reads, blocking writes, a baud-rate setter and a name. Production wraps a
+/// <see cref="SerialPort"/>; tests substitute a scripted fake so transactions, unsolicited
+/// demux, and dispose ordering run without hardware.
 /// </summary>
 public interface ISerialIo : IDisposable
 {

@@ -23,7 +23,7 @@ public sealed record TaitBand(string Code, int MinHz, int MaxHz, string? Amateur
 /// <c>[00]</c> (the <c>RADIO_VERSIONS</c> query, e.g. <c>TMAB12-B100_0201</c>); the band designator is
 /// the <c>[A-Z][0-9]</c> pair immediately after the <b>first</b> <c>-</c>. The <em>frequency</em> a
 /// radio is tuned to is not CCDI-readable, but the <em>band split</em> - hence the amateur band - is,
-/// so PDN can label a head-end-adopted port by band without operator input.
+/// so a host can label a port by band without operator input.
 /// </summary>
 public static class TaitBandCatalog
 {

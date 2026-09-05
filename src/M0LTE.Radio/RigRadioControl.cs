@@ -37,7 +37,7 @@ namespace M0LTE.Radio;
 /// </para>
 /// <para>
 /// <b>Ownership and unkey.</b> <c>ownsRig: true</c> transfers the rig's lifetime to this
-/// adapter (the node factory hands it a dedicated rig connection): dispose stops the poll loop,
+/// adapter (a host factory hands it a dedicated rig connection): dispose stops the poll loop,
 /// then disposes the rig. <c>false</c> (default) leaves the rig to outlive the adapter. Dispose
 /// best-effort unkeys (swallowing failures) only when the last transmitter command through this
 /// adapter keyed the rig (or left a key's outcome unknown) AND the rig is not owned; an owned

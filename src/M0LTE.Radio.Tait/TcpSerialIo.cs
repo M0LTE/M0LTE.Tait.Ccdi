@@ -5,7 +5,9 @@ namespace M0LTE.Radio.Tait;
 /// <summary>
 /// A TCP-backed <see cref="ISerialIo"/>: the Tait CCDI driver's byte seam pointed at a remote
 /// "head-end" that bridges a serial port as a raw binary TCP pipe (the split-station topology -
-/// see <c>docs/research/split-station-rf-headend.md</c>). The socket carries the pure
+/// see
+/// <see href="https://github.com/packet-net/packet.net/blob/main/docs/research/split-station-rf-headend.md">the split-station RF head-end research note</see>).
+/// The socket carries the pure
 /// CCDI/PROGRESS byte stream unchanged, so the whole radio-control stack (transactions, DCD
 /// carrier-sense edges, SDM, telemetry) runs over the wire exactly as it does over a local
 /// <see cref="System.IO.Ports.SerialPort"/>.
@@ -22,10 +24,10 @@ namespace M0LTE.Radio.Tait;
 /// </para>
 /// <para>
 /// <b>Half-open detection.</b> Beyond the per-read pacing timeout, a longer read-idle budget
-/// guards against a silently dropped connection (peer rebooted, cable pulled - no FIN),
-/// once the link has produced no byte for
-/// that budget a receive timeout is escalated to an <see cref="IOException"/> so the pump faults
-/// the radio rather than pacing forever. OS TCP keepalive is enabled as the faster probe.
+/// guards against a silently dropped connection (peer rebooted, cable pulled - no FIN). Once
+/// the link has produced no byte for that budget, a receive timeout is escalated to an
+/// <see cref="IOException"/> so the pump faults the radio rather than pacing forever. OS TCP
+/// keepalive is enabled as the faster probe.
 /// </para>
 /// <para>
 /// <b>Line rate.</b> The data socket is a pure binary pipe already clocked at the head-end;
@@ -41,7 +43,7 @@ public sealed class TcpSerialIo : ISerialIo
 
     /// <summary>Read-idle budget before a quiet link is presumed half-open and dead. Generous
     /// because a healthy packet channel is often quiet for long stretches; OS keepalive is the
-    /// faster probe. Mirrors <c>KissTcpClient.DefaultReadIdleTimeout</c>.</summary>
+    /// faster probe.</summary>
     public static readonly TimeSpan DefaultReadIdleTimeout = TimeSpan.FromMinutes(5);
 
     private readonly Socket socket;
@@ -168,7 +170,7 @@ public sealed class TcpSerialIo : ISerialIo
 
     // Ask the OS to probe a quiet peer so a half-open connection surfaces as a read error in
     // bounded time. Best-effort: keepalive knobs are platform-dependent and a failure to set them
-    // is non-fatal - the read-idle timeout is the portable backstop. Mirrors KissTcpClient.
+    // is non-fatal - the read-idle timeout is the portable backstop.
     private static void EnableTcpKeepAlive(Socket socket)
     {
         try

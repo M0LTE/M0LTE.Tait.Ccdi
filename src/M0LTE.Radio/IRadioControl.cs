@@ -1,16 +1,19 @@
+using M0LTE.Rig;
+
 namespace M0LTE.Radio;
 
 /// <summary>
-/// A control/telemetry channel to the radio behind a modem - the seam OQ-011 asked for.
+/// A control/telemetry channel to the radio behind a modem.
 /// The contract is the *common subset* a CAT-style serial protocol can realistically offer
 /// (RSSI read, carrier-sense, transmitter keying); anything richer is discovered through
 /// <see cref="Capabilities"/> and exposed on the concrete driver (e.g. Tait CCDI's PA
 /// temperature or forward/reverse power live on <c>TaitCcdiRadio</c>, not here).
 /// </summary>
 /// <remarks>
-/// Experimental (Phase 10 spike): the shape follows plan OQ-011's proposed common subset
-/// {RSSI-get, busy-get, PTT-set} - frequency/channel control is deliberately deferred until a
-/// second implementation (Yaesu CAT / ICOM CI-V) exists to test the abstraction against.
+/// The {RSSI-get, busy-get, PTT-set} subset has held across four implementations without an
+/// interface change; frequency and channel control deliberately stay on the station-control
+/// seam (<see cref="IRigControl"/> in <c>M0LTE.Rig</c>), which is why those flags are reserved
+/// here.
 /// </remarks>
 public interface IRadioControl : IAsyncDisposable
 {

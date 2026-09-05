@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 namespace M0LTE.Radio.Tait;
 
 /// <summary>
-/// Finds Tait radios on the machine's serial ports - the CCDI analogue of
-/// <c>NinoTncPortDiscovery</c>, but with an authoritative probe: unlike KISS, CCDI has a
-/// query/response identity command, so a candidate port either answers a MODEL query with a
-/// serial number or it isn't a Tait radio. Intended for the node host's "just plug it in"
-/// configuration story: enumerate, probe, present <c>ProductName + serial</c> to the operator.
+/// Finds Tait radios on the machine's serial ports - serial-port discovery with an
+/// authoritative probe: unlike KISS, CCDI has a query/response identity command, so a
+/// candidate port either answers a MODEL query with a serial number or it isn't a Tait radio.
+/// Intended for a host's "just plug it in" configuration story: enumerate, probe, present
+/// <c>ProductName + serial</c> to the operator.
 /// </summary>
 /// <remarks>
 /// The CCDI USB dongles seen in the wild (CP2102s) often share identical USB serial numbers,
@@ -21,7 +21,9 @@ namespace M0LTE.Radio.Tait;
 public static class TaitRadioPortDiscovery
 {
     /// <summary>Colon/semicolon/comma-separated list of ports to probe INSTEAD of scanning
-    /// (e.g. <c>"/dev/ttyUSB0,/dev/ttyUSB1"</c>).</summary>
+    /// (e.g. <c>"/dev/ttyUSB0,/dev/ttyUSB1"</c>). The name keeps the <c>PACKETNET_</c> prefix
+    /// deliberately, matching the Packet.NET node's <c>PACKETNET_*_PORTS</c> family of
+    /// overrides so operators have one convention across both.</summary>
     public const string PortsOverrideEnvVar = "PACKETNET_TAIT_PORTS";
 
     /// <summary>

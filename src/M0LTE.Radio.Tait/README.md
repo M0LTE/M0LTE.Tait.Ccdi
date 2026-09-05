@@ -31,7 +31,7 @@ radio.CarrierSenseChanged += (_, e) => Console.WriteLine($"DCD {(e.Busy ? "up" :
 
 The radio must be programmed with its data port in **Command mode** (the power-up state) at the matching baud rate.
 
-`TaitCcdiRadio.Open` also takes an `ISerialIo` instead of a port name, so you can drive the radio over a byte pipe this package does not model - a serial-to-TCP bridge, say ([`TcpSerialIo`](https://www.nuget.org/packages/M0LTE.Radio.Tait) is supplied) - or script one in a test and exercise the whole transaction engine and unsolicited-message demux with no hardware attached.
+`TaitCcdiRadio.Open` also takes an `ISerialIo` instead of a port name, so you can drive the radio over a byte pipe this package does not model - a serial-to-TCP bridge, say (`TcpSerialIo` is supplied) - or script one in a test and exercise the whole transaction engine and unsolicited-message demux with no hardware attached.
 
 ## TNC-less AX.25 over the radio's own FFSK modem
 

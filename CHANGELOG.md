@@ -4,6 +4,14 @@ Newest first. Versions are the `v*` tags in this repo; both packages release tog
 
 ## Unreleased
 
+## 0.1.1
+
+- Fixed: `TaitCcdiRadio.Dispose()` racing an in-flight transaction. An in-flight caller now fails promptly with `ObjectDisposedException` instead of waiting out the full `TransactionTimeout` and then hitting a disposed semaphore, and a caller queued behind a stuck transaction is woken the same way instead of waiting forever.
+- Fixed the root README code sample: `TaitRadioIdentity` has no `Model` property; the sample now reads `.ProductName`.
+- Added an em dash/en dash tripwire to `scripts/check-ascii-output.sh`, failing CI if any git-tracked file other than `LICENSE` contains one.
+- Doc comments no longer point at packet.net-internal types, files or plan sections left over from the repo split; several now describe the behaviour instead or link to the relevant research note by URL.
+- Removed the unused `Xunit.SkippableFact` test dependency; nothing in this repo's tests uses it.
+
 ## 0.1.0
 
 First release from this repo.

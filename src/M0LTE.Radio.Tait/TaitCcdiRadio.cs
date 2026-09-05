@@ -8,9 +8,9 @@ namespace M0LTE.Radio.Tait;
 /// <summary>
 /// A Tait TM8100/TM8200 radio driven over its CCDI serial control channel (Command mode).
 /// Surfaces what standard KISS cannot: receiver RSSI in dBm (per-poll, suitable for per-frame
-/// attribution via <c>M0LTE.Radio.RssiTaggingTransport</c>), hardware carrier-sense (DCD)
-/// edges as <see cref="CarrierSenseChanged"/> events, transmitter keying, and radio telemetry
-/// (PA temperature, forward/reverse power).
+/// attribution by a transport that stamps each decoded frame with the RSSI read at the time),
+/// hardware carrier-sense (DCD) edges as <see cref="CarrierSenseChanged"/> events, transmitter
+/// keying, and radio telemetry (PA temperature, forward/reverse power).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -81,7 +81,7 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// <inheritdoc/>
     /// <remarks><see cref="RadioCapabilities.SideChannel"/> advertises the driver machinery
     /// (<see cref="TaitSdmSideChannel"/>); whether SDMs are enabled in the radio's programming
-    /// needs a live probe (error 0/06 = disabled - cf. the tuning doctor's SDM probe).</remarks>
+    /// needs a live probe (error 0/06 = disabled - a send-to-self or known-peer SDM probe).</remarks>
     public RadioCapabilities Capabilities =>
         RadioCapabilities.RssiRead | RadioCapabilities.CarrierSense | RadioCapabilities.TransmitterControl |
         RadioCapabilities.SideChannel;
@@ -126,7 +126,8 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// programmed, a Tx lockout timer - and, when <c>Override VSWR Foldback Power</c> is set in the
     /// codeplug, high reverse power. High reverse power <b>without</b> that override is a different
     /// thing entirely and does not appear here: the radio transmits at reduced power and only warns
-    /// locally (two warbles), which is why <c>TaitTestTransmit</c> also looks at the detectors.
+    /// locally (two warbles), which is why a test transmission should also read the
+    /// forward/reverse detectors.
     /// </para>
     /// </remarks>
     public event EventHandler<TaitTransmitInhibited>? TransmitInhibited;
@@ -230,7 +231,8 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
 
     /// <summary>
     /// Open a Tait radio whose CCDI serial port is bridged as a raw binary TCP pipe by a remote
-    /// head-end (the split-station topology - see <c>docs/research/split-station-rf-headend.md</c>)
+    /// head-end (the split-station topology - see
+    /// <see href="https://github.com/packet-net/packet.net/blob/main/docs/research/split-station-rf-headend.md">the split-station RF head-end research note</see>)
     /// and start the read pump. The socket carries the CCDI/PROGRESS byte stream unchanged, so
     /// carrier-sense (DCD) edges, RSSI reads, SDM and every transaction work exactly as over a
     /// local port. Like <see cref="Open(string, int, TaitCcdiRadioOptions, TimeProvider)"/>, the
@@ -749,7 +751,10 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             completeOnPrompt: true, quietTime: null, cancellationToken);
     }
 
-    /// <summary>The diagnostic id suppressing the CCR-over-SDM experimental warnings.</summary>
+    /// <summary>The diagnostic id suppressing the CCR-over-SDM experimental warnings. The value
+    /// keeps its original <c>PKTTAIT</c> prefix deliberately: it predates this library's split
+    /// into its own repository, and existing <c>#pragma warning disable PKTTAIT001</c>
+    /// suppressions in consumers keep working unchanged.</summary>
     public const string CcrOverSdmDiagnosticId = "PKTTAIT001";
 
     private Task<IReadOnlyList<CcdiMessage>> SendAdaptableSdmAsync(
@@ -954,8 +959,8 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
             {
                 mode = TaitProtocolMode.Command;
             }
-            // The verify budget runs on the driver's clock (plan 2.7), like the guard delays
-            // either side of it, so a FakeTimeProvider test can drive the whole escape dance.
+            // The verify budget runs on the driver's clock, like the guard delays either side of
+            // it, so a FakeTimeProvider test can drive the whole escape dance.
             using var verifyCts = new CancellationTokenSource(verify, clock);
             using var attemptCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, verifyCts.Token);
@@ -1148,7 +1153,20 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
 
         string encoded = command.Encode();
-        await commandGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        // Link the caller's token to pumpCts so a Dispose racing this transaction wakes the
+        // wait instead of leaving the caller queued on a gate that is about to be disposed.
+        // Dispose cancels pumpCts before doing anything else, so this is the same signal.
+        using var gateCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, pumpCts.Token);
+        try
+        {
+            await commandGate.WaitAsync(gateCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (
+            pumpCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            throw new ObjectDisposedException(nameof(TaitCcdiRadio));
+        }
         try
         {
             var txn = new Transaction(matches, minCount, completeOnPrompt);
@@ -1209,7 +1227,22 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         }
         finally
         {
+            ReleaseCommandGate();
+        }
+    }
+
+    // Dispose deliberately does not wait for an in-flight transaction: it cancels pumpCts,
+    // fails the active transaction, and then disposes commandGate out from under whoever is
+    // holding it. That caller's own finally still runs and lands here after the semaphore is
+    // gone, so releasing a disposed gate is an expected race, not a bug - swallow it.
+    private void ReleaseCommandGate()
+    {
+        try
+        {
             commandGate.Release();
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 
@@ -1562,6 +1595,15 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
         }
 
         pumpCts.Cancel();
+
+        // Fail the in-flight transaction (if any) promptly rather than leaving its caller to
+        // wait out the full TransactionTimeout and then hit a disposed commandGate.
+        Transaction? pending;
+        lock (stateGate)
+        {
+            pending = active;
+        }
+        pending?.Done.TrySetException(new ObjectDisposedException(nameof(TaitCcdiRadio)));
 
         bool mustUnkey;
         bool mustExitCcr;

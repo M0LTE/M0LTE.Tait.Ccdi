@@ -21,7 +21,7 @@ await radio.SetProgressMessagesAsync(true);          // enable DCD events
 radio.CarrierSenseChanged += (_, e) =>
     Console.WriteLine($"channel {(e.Busy ? "busy" : "clear")} at {e.At:O}");
 
-Console.WriteLine((await radio.QueryIdentityAsync()).Model);
+Console.WriteLine((await radio.QueryIdentityAsync()).ProductName);
 Console.WriteLine($"{await radio.ReadRssiDbmAsync():F1} dBm");
 ```
 

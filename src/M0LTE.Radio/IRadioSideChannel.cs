@@ -12,8 +12,8 @@ namespace M0LTE.Radio;
 /// <b>modem-mode- and deviation-agnostic</b>: it keeps working while the stations at both ends
 /// reconfigure (or misconfigure) the very link the audio modems carry. That makes it the
 /// coordination channel for exactly the operations that would otherwise be
-/// chicken-and-egg over the main link - renegotiating TNC modes (Phase 10 mode agility),
-/// remote deviation tuning, and any future switch-then-verify manoeuvre. It is small and slow
+/// chicken-and-egg over the main link - renegotiating TNC modes, remote deviation tuning, and
+/// any future switch-then-verify manoeuvre. It is small and slow
 /// (tens of characters per datagram, seconds per exchange) by design; it is a control plane,
 /// never a data plane.
 /// </para>
@@ -23,8 +23,8 @@ namespace M0LTE.Radio;
 /// SDMs + auto-acknowledgements enabled, e.g.). Hosts are expected to <em>gate</em>
 /// side-channel-coordinated features on a live probe - drivers advertise the machinery via
 /// <see cref="RadioCapabilities.SideChannel"/>, and a doctor-style probe (send-to-self or a
-/// known-peer exchange, cf. <c>TuningDoctor</c>'s "SDM accepted" probe) confirms it end-to-end
-/// before anything (mode negotiation, tuning sessions) is offered on that port.
+/// known-peer exchange, confirming the datagram was accepted) confirms it end-to-end before
+/// anything (mode negotiation, tuning sessions) is offered on that port.
 /// </para>
 /// <para>
 /// <b>Delivery model.</b> <see cref="SendAsync"/> completes when the radio accepts the datagram

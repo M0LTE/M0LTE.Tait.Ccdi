@@ -195,6 +195,64 @@ public class TaitCcdiRadioTests
     }
 
     [Fact]
+    public async Task Dispose_During_An_In_Flight_Transaction_Fails_It_Promptly_With_ObjectDisposed()
+    {
+        var io = new FakeSerialIo();
+        var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions
+        {
+            KeepAliveInterval = null,
+            StaleBusyRevalidateAfter = null,
+            TransactionTimeout = TimeSpan.FromSeconds(30),
+        });
+
+        var reading = radio.ReadRssiDbmAsync().AsTask();
+        await WaitForWriteAsync(io, "q0450645C");
+
+        radio.Dispose();
+
+        var act = () => reading.WaitAsync(TimeSpan.FromSeconds(5));
+        await act.Should().ThrowAsync<ObjectDisposedException>(
+            "an in-flight caller must fail promptly on dispose instead of waiting out the full " +
+            "TransactionTimeout and then hitting a disposed commandGate");
+    }
+
+    [Fact]
+    public async Task Dispose_Wakes_A_Transaction_Queued_Behind_A_Stuck_One()
+    {
+        var io = new FakeSerialIo();
+        var radio = TaitCcdiRadio.Open(io, new TaitCcdiRadioOptions
+        {
+            KeepAliveInterval = null,
+            StaleBusyRevalidateAfter = null,
+            TransactionTimeout = TimeSpan.FromSeconds(30),
+        });
+
+        var stuck = radio.ReadRssiDbmAsync().AsTask();
+        await WaitForWriteAsync(io, "q0450645C");
+        var queued = radio.ReadAveragedRssiDbmAsync();
+
+        radio.Dispose();
+
+        var act = () => queued.WaitAsync(TimeSpan.FromSeconds(5));
+        await act.Should().ThrowAsync<ObjectDisposedException>(
+            "a caller still queued on the command gate must be woken by dispose, not left waiting forever");
+
+        var stuckAct = () => stuck.WaitAsync(TimeSpan.FromSeconds(5));
+        await stuckAct.Should().ThrowAsync<ObjectDisposedException>(
+            "the transaction dispose interrupted must also fail promptly");
+    }
+
+    private static async Task WaitForWriteAsync(FakeSerialIo io, string commandWithoutCr)
+    {
+        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5);
+        while (!io.WrittenAscii.Contains(commandWithoutCr, StringComparison.Ordinal))
+        {
+            DateTimeOffset.UtcNow.Should().BeBefore(deadline, $"the driver should have sent {commandWithoutCr}");
+            await Task.Delay(10);
+        }
+    }
+
+    [Fact]
     public async Task EscapeAndVerify_Bounds_Its_Verify_Wait_On_The_Injected_Clock()
     {
         var clock = new FakeTimeProvider();

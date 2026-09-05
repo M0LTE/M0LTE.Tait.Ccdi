@@ -44,7 +44,7 @@ public class TaitRigControlTests
         return TaitCcdiRadio.Open(io, options, clock);
     }
 
-    /// <summary>The identity the node caches at adoption, so the adapter can be built without
+    /// <summary>The identity a host caches at adoption, so the adapter can be built without
     /// wire traffic (an identity query needs the clock advanced under a FakeTimeProvider).</summary>
     private static TaitRadioIdentity KnownIdentity()
         => new('1', '3', '2', "03.02", "12345678", new Dictionary<string, string>());
@@ -263,8 +263,8 @@ public class TaitRigControlTests
         using var io = new FakeSerialIo();
         io.RespondTo(Frame('f', "91"), ".");
         // Nothing answers the unkey, and the transaction deadline is set far past the 2 s
-        // dispose budget: dispose can only finish if that budget runs on the injected clock
-        // (plan 2.7), which this test advances instead of waiting two real seconds for.
+        // dispose budget: dispose can only finish if that budget runs on the injected clock,
+        // which this test advances instead of waiting two real seconds for.
         await using var radio = NewRadio(
             io, transactionTimeout: TimeSpan.FromMinutes(10), clock: clock, promptErrorGrace: TimeSpan.Zero);
         var rig = TaitRigControl.Create(radio, KnownIdentity(), ownsRadio: false, timeProvider: clock);

@@ -1,6 +1,6 @@
 name: publish
 
-# Tagging v<semver> gates on the tests, then publishes all three packages to nuget.org and
+# Tagging v<semver> gates on the tests, then publishes both packages to nuget.org and
 # cuts a GitHub Release.
 #
 # Two things about this file that are load-bearing and not obvious:
