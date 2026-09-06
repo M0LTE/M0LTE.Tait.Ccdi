@@ -27,8 +27,8 @@
     <Authors>Tom Fanning M0LTE</Authors>
     <Copyright>Copyright © 2026 Tom Fanning</Copyright>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/M0LTE/M0LTE.Radio</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/M0LTE/M0LTE.Radio</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/M0LTE/M0LTE.Tait.Ccdi</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/M0LTE/M0LTE.Tait.Ccdi</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
 
     <PackageReadmeFile Condition="Exists('$(MSBuildProjectDirectory)/README.md')">README.md</PackageReadmeFile>

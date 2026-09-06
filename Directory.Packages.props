@@ -8,10 +8,11 @@
   <ItemGroup>
     <!-- The Tait driver's serial transport. -->
     <PackageVersion Include="System.IO.Ports" Version="10.0.11" />
-    <!-- The CAT abstraction, from M0LTE/M0LTE.Rig. RigRadioControl bridges it into
-         IRadioControl, and TaitRigControl implements it. Sibling repo, released on its own
+    <!-- The abstractions this driver implements: IRadioControl, IRadioSideChannel and
+         RadioCapabilities (TaitCcdiRadio, TaitSdmSideChannel), plus the station-control seam
+         IRigControl (TaitRigControl). From M0LTE/M0LTE.Rig, sibling repo, released on its own
          cadence: bump this pin to pick up a new one. -->
-    <PackageVersion Include="M0LTE.Rig" Version="0.1.0" />
+    <PackageVersion Include="M0LTE.Rig" Version="0.2.0" />
   </ItemGroup>
 
   <!-- Test-only dependencies (referenced from tests/Directory.Build.props). -->
