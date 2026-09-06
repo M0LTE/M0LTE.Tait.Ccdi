@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" />
+    <!-- TaitRigControl re-presents the CCDI radio through the station-control seam
+         (M0LTE.Rig.IRigControl), which is dependency-free. -->
+    <PackageReference Include="M0LTE.Rig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="M0LTE.Tait.Ccdi.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Title>M0LTE.Tait.Ccdi - Tait TM8100/TM8200 CCDI radio control</Title>
+    <Description>Tait TM8100/TM8200 CCDI serial control: per-frame RSSI in dBm, hardware carrier-sense (DCD) events, transmitter keying, the SDM side channel, and radio telemetry (PA temperature, forward/reverse power). Implements the M0LTE.Rig IRadioControl abstraction and, via TaitRigControl, the M0LTE.Rig IRigControl station-control seam (PTT + relative RF-power meter). Source: github.com/M0LTE/M0LTE.Tait.Ccdi.</Description>
+    <PackageTags>amateur-radio;tait;tm8100;tm8200;ccdi;rssi;dcd;radio-control</PackageTags>
+  </PropertyGroup>
+
+</Project>

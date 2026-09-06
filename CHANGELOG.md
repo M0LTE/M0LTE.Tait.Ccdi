@@ -1,8 +1,18 @@
 # Changelog
 
-Newest first. Versions are the `v*` tags in this repo; both packages release together.
+Newest first. Versions are the `v*` tags in this repo; one package.
 
 ## Unreleased
+
+## 0.2.0
+
+- Renamed: the repo and package are `M0LTE.Tait.Ccdi` now (previously `M0LTE.Radio.Tait`), root namespace `M0LTE.Tait.Ccdi`. The CCDI wire-codec types that lived in `M0LTE.Radio.Tait.Ccdi` are now directly in `M0LTE.Tait.Ccdi`.
+- The sibling `M0LTE.Radio` abstractions package is retired: `IRadioControl`, `IRadioSideChannel`, `RadioCapabilities` and `RigRadioControl` now ship in [`M0LTE.Rig`](https://github.com/M0LTE/M0LTE.Rig) 0.2.0, under the `M0LTE.Rig` namespace. Porting: `using M0LTE.Radio;` becomes `using M0LTE.Rig;`, and `using M0LTE.Radio.Tait;` / `using M0LTE.Radio.Tait.Ccdi;` both become `using M0LTE.Tait.Ccdi;`, plus swapping the `M0LTE.Radio.Tait` package reference for `M0LTE.Tait.Ccdi`. Behaviour is unchanged.
+- Fixed: `TaitCcdiRadio.Dispose()` racing an in-flight transaction. An in-flight caller now fails promptly with `ObjectDisposedException` instead of waiting out the full `TransactionTimeout` and then hitting a disposed semaphore, and a caller queued behind a stuck transaction is woken the same way instead of waiting forever.
+- Fixed the root README code sample: `TaitRadioIdentity` has no `Model` property; the sample now reads `.ProductName`.
+- Added an em dash/en dash tripwire to `scripts/check-ascii-output.sh`, failing CI if any git-tracked file other than `LICENSE` contains one.
+- Doc comments no longer point at packet.net-internal types, files or plan sections left over from the repo split; several now describe the behaviour instead or link to the relevant research note by URL.
+- Removed the unused `Xunit.SkippableFact` test dependency; nothing in this repo's tests uses it.
 
 ## 0.1.0
 

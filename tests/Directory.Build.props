@@ -17,10 +17,6 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <!-- AwesomeAssertions: license-friendly FluentAssertions fork, the sole assertion library. -->
     <PackageReference Include="AwesomeAssertions" />
-    <!-- Xunit.SkippableFact: xUnit 2 has no native Skip API, and a test that cannot run must
-         report Skipped, never a silent green Pass. The rigctld interop tests gate on the
-         binary being installed. -->
-    <PackageReference Include="Xunit.SkippableFact" />
     <!-- Banned-symbol analyzer: BannedSymbols.txt bans Xunit.Assert, so "AwesomeAssertions is
          the sole assertion library" is a build error (RS0030) rather than an aspiration. -->
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers"

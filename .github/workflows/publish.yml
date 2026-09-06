@@ -1,6 +1,6 @@
 name: publish
 
-# Tagging v<semver> gates on the tests, then publishes all three packages to nuget.org and
+# Tagging v<semver> gates on the tests, then publishes the package to nuget.org and
 # cuts a GitHub Release.
 #
 # Two things about this file that are load-bearing and not obvious:
@@ -58,7 +58,7 @@ jobs:
           VERSION: ${{ steps.v.outputs.version }}
         run: |
           set -euo pipefail
-          for p in M0LTE.Radio M0LTE.Radio.Tait; do
+          for p in M0LTE.Tait.Ccdi; do
             dotnet pack "src/${p}/${p}.csproj" -c Release --output ./artifacts -p:Version="${VERSION}"
           done
           ls -l ./artifacts/
@@ -75,7 +75,7 @@ jobs:
           API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           set -euo pipefail
-          for p in M0LTE.Radio M0LTE.Radio.Tait; do
+          for p in M0LTE.Tait.Ccdi; do
             dotnet nuget push "./artifacts/${p}.${VERSION}.nupkg" \
               --source https://api.nuget.org/v3/index.json \
               --api-key "${API_KEY}" \
@@ -105,4 +105,4 @@ jobs:
             notes=$(git log --pretty=format:'- %s' "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD)"..HEAD)
           fi
           printf '%s\n' "$notes" > /tmp/notes.md
-          gh release create "v${VERSION}" --title "M0LTE.Radio ${VERSION}" --notes-file /tmp/notes.md
+          gh release create "v${VERSION}" --title "M0LTE.Tait.Ccdi ${VERSION}" --notes-file /tmp/notes.md

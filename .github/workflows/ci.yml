@@ -26,8 +26,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      # Lights up the six [SkippableFact] rigctld interop tests in M0LTE.Radio.Tait.Tests,
-      # which drive a real hamlib dummy rig. Without it they report Skipped, not Passed.
       - name: guard - plain ASCII in operator-facing output
         run: bash scripts/check-ascii-output.sh
       - name: build
