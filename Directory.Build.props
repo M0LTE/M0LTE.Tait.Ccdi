@@ -1,7 +1,10 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- net8.0 as well as net10.0 so .NET 8 apps can take this package, e.g. kissproxy,
+         which ships as a self-contained linux-arm build for 32-bit Raspberry Pis on glibc 2.31,
+         where .NET 10 does not run. Tests run on both. -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

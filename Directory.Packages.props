@@ -12,7 +12,7 @@
          RadioCapabilities (TaitCcdiRadio, TaitSdmSideChannel), plus the station-control seam
          IRigControl (TaitRigControl). From M0LTE/M0LTE.Rig, sibling repo, released on its own
          cadence: bump this pin to pick up a new one. -->
-    <PackageVersion Include="M0LTE.Rig" Version="0.2.0" />
+    <PackageVersion Include="M0LTE.Rig" Version="0.3.0" />
   </ItemGroup>
 
   <!-- Test-only dependencies (referenced from tests/Directory.Build.props). -->

@@ -12,7 +12,7 @@ internal sealed class FakeSerialIo : ISerialIo
     private readonly StringBuilder written = new();
     private readonly List<byte> writtenBytes = [];
     private readonly List<int> baudRates = [];
-    private readonly Lock gate = new();
+    private readonly object gate = new();
 
     public string PortName => "fake";
 
