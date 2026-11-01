@@ -4,7 +4,7 @@ Newest first. Versions are the `v*` tags in this repo; one package.
 
 ## Unreleased
 
-- Now targets `net8.0` as well as `net10.0`, so .NET 8 apps can use it. Needs `M0LTE.Rig` 0.3.0, the first release that targets `net8.0` too. `System.IO.Ports` 10.0.11 already supports `net8.0`, so that pin is unchanged. The tests run on both.
+- Now targets `net8.0` as well as `net10.0`, so .NET 8 apps can use it. Needs `M0LTE.Rig` 0.3.0, the first release that targets `net8.0` too. On `net8.0` it depends on `System.IO.Ports` 8.0.0 rather than 10.0.11, because the newer package's linux-arm native library needs glibc 2.34 and won't load on 32-bit Raspbian 11. The tests run on both.
 
 ## 0.2.0
 

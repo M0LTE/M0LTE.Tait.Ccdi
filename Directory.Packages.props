@@ -6,8 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The Tait driver's serial transport. -->
-    <PackageVersion Include="System.IO.Ports" Version="10.0.11" />
+    <!-- The Tait driver's serial transport. On net8.0 it stays at 8.0.0: from 9.0 its
+         linux-arm native library needs glibc 2.34, and the .NET 8 consumers this target exists
+         for include 32-bit Raspbian 11 (glibc 2.31). -->
+    <PackageVersion Include="System.IO.Ports" Version="10.0.11" Condition="'$(TargetFramework)' != 'net8.0'" />
+    <PackageVersion Include="System.IO.Ports" Version="8.0.0" Condition="'$(TargetFramework)' == 'net8.0'" />
     <!-- The abstractions this driver implements: IRadioControl, IRadioSideChannel and
          RadioCapabilities (TaitCcdiRadio, TaitSdmSideChannel), plus the station-control seam
          IRigControl (TaitRigControl). From M0LTE/M0LTE.Rig, sibling repo, released on its own
