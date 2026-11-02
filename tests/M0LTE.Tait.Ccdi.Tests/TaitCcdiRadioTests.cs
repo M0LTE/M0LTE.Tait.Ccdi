@@ -89,6 +89,34 @@ public class TaitCcdiRadioTests
     }
 
     [Fact]
+    public async Task A_Line_With_A_Bad_Checksum_Is_Reported_And_Not_Decoded()
+    {
+        using var io = new FakeSerialIo();
+        await using var radio = TaitCcdiRadio.Open(io, Quiet());
+        var rejected = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var decoded = new System.Collections.Concurrent.ConcurrentQueue<CcdiMessage>();
+        var seen = new SemaphoreSlim(0);
+        radio.LineRejected += (_, line) =>
+        {
+            rejected.Enqueue(line);
+            seen.Release();
+        };
+        radio.MessageReceived += (_, m) =>
+        {
+            decoded.Enqueue(m);
+            seen.Release();
+        };
+
+        io.Enqueue(".j07064-456C8\r.");   // checksum one off
+        io.Enqueue(".j07064-456C9\r.");   // good
+        (await seen.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
+        (await seen.WaitAsync(TimeSpan.FromSeconds(2))).Should().BeTrue();
+
+        rejected.Should().Equal("j07064-456C8");
+        decoded.Should().ContainSingle().Which.Should().BeOfType<CcdiQueryResultMessage>();
+    }
+
+    [Fact]
     public async Task Unsolicited_Progress_Raises_CarrierSense_And_Tracks_ChannelBusy()
     {
         using var io = new FakeSerialIo();
