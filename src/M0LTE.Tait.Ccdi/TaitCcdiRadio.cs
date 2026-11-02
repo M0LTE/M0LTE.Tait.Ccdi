@@ -148,6 +148,11 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     /// <summary>Every decoded inbound message, solicited or not - a diagnostics tap.</summary>
     public event EventHandler<CcdiMessage>? MessageReceived;
 
+    /// <summary>Every inbound line dropped because its SIZE or checksum didn't match, as received
+    /// (CR stripped) - a diagnostics tap for a noisy serial link. A transaction waiting on a
+    /// dropped answer times out.</summary>
+    public event EventHandler<string>? LineRejected;
+
     /// <summary>Unsolicited RING messages - incoming Selcall / status / SDM / data calls.</summary>
     public event EventHandler<CcdiRingMessage>? RingReceived;
 
@@ -1321,7 +1326,9 @@ public sealed class TaitCcdiRadio : IRadioControl, IDisposable
     {
         if (!CcdiFrame.TryParse(rawLine, out var frame))
         {
-            return; // line noise / partial line from before open - normal on an async serial link
+            // line noise / partial line from before open - normal on an async serial link
+            LineRejected?.Invoke(this, rawLine);
+            return;
         }
 
         var message = CcdiMessage.Decode(frame);
